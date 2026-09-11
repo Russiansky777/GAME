@@ -20,6 +20,7 @@ public:
 
     ETidePhase GetPhase() const { return Phase; }
     float GetSecondsRemaining() const;
+    float GetSecondsUntilAccessCloses() const;
     FString GetPhaseName() const;
     int32 GetLowCycle() const { return LowCycle; }
     bool IsAccessOpen() const { return bAccessOpen; }
@@ -50,4 +51,6 @@ private:
     static constexpr float HighDuration = 10.0f;
     static constexpr float LowWaterZ = -20.0f;
     static constexpr float HighWaterZ = 40.0f;
+    static constexpr float AccessClosingWaterZ = 8.0f;
+    static constexpr float ClosingWarningDuration = 20.0f;
 };

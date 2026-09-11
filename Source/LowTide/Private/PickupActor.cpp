@@ -56,13 +56,15 @@ bool APickupActor::Interact(AActor* Interactor)
         return false;
     }
 
-    const ALowTideGameMode* GameMode = GetWorld()->GetAuthGameMode<ALowTideGameMode>();
+    ALowTideGameMode* GameMode = GetWorld()->GetAuthGameMode<ALowTideGameMode>();
     const FItemDefinition* Definition = GameMode ? GameMode->GetItemCatalog().Find(ItemId) : nullptr;
     if (!Definition)
     {
         Character->ShowFeedback(TEXT("That salvage is not registered."));
         return false;
     }
+
+    GameMode->BeginExpeditionIfNeeded(Character);
 
     FString Reason;
     if (!Character->GetInventory()->TryAdd(ItemId, 1, Reason))

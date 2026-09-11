@@ -41,6 +41,23 @@ float ATideController::GetSecondsRemaining() const
     return FMath::Max(0.0f, GetPhaseDuration() - PhaseElapsed);
 }
 
+float ATideController::GetSecondsUntilAccessCloses() const
+{
+    if (!bAccessOpen)
+    {
+        return 0.0f;
+    }
+
+    const float RisingOpenDuration = RisingDuration * (AccessClosingWaterZ - LowWaterZ) / (HighWaterZ - LowWaterZ);
+    switch (Phase)
+    {
+    case ETidePhase::Falling: return GetSecondsRemaining() + LowDuration + RisingOpenDuration;
+    case ETidePhase::Low: return GetSecondsRemaining() + RisingOpenDuration;
+    case ETidePhase::Rising: return FMath::Max(0.0f, RisingOpenDuration - PhaseElapsed);
+    default: return 0.0f;
+    }
+}
+
 FString ATideController::GetPhaseName() const
 {
     switch (Phase)
@@ -55,7 +72,7 @@ FString ATideController::GetPhaseName() const
 
 bool ATideController::IsClosingWarning() const
 {
-    return (Phase == ETidePhase::Low && GetSecondsRemaining() <= 12.0f) || Phase == ETidePhase::Rising;
+    return bAccessOpen && GetSecondsUntilAccessCloses() <= ClosingWarningDuration;
 }
 
 void ATideController::AdvancePhase()
@@ -102,7 +119,7 @@ void ATideController::ApplyState()
         Water->SetActorLocation(Location);
     }
     // The water cube is 20 cm thick. Collision follows the visible surface crossing the path top.
-    const bool bNewAccessOpen = WaterZ + 10.0f < 18.0f;
+    const bool bNewAccessOpen = WaterZ < AccessClosingWaterZ;
     if (CausewayBlocker)
     {
         CausewayBlocker->SetActorEnableCollision(!bNewAccessOpen);

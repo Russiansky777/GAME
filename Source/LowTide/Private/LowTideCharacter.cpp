@@ -13,7 +13,7 @@ ALowTideCharacter::ALowTideCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
     GetCapsuleComponent()->InitCapsuleSize(42.0f, 92.0f);
-    GetCharacterMovement()->MaxWalkSpeed = 500.0f;
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     GetCharacterMovement()->JumpZVelocity = 0.0f;
 
     FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
@@ -43,6 +43,8 @@ void ALowTideCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
     PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &ALowTideCharacter::LookUp);
     PlayerInputComponent->BindAction(TEXT("Interact"), IE_Pressed, this, &ALowTideCharacter::Interact);
     PlayerInputComponent->BindAction(TEXT("Inventory"), IE_Pressed, this, &ALowTideCharacter::ToggleInventory);
+    PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Pressed, this, &ALowTideCharacter::StartSprint);
+    PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Released, this, &ALowTideCharacter::StopSprint);
     PlayerInputComponent->BindAction(TEXT("Quit"), IE_Pressed, this, &ALowTideCharacter::QuitGame);
     PlayerInputComponent->BindAction(TEXT("Sell1"), IE_Pressed, this, &ALowTideCharacter::SellSlot1);
     PlayerInputComponent->BindAction(TEXT("Sell2"), IE_Pressed, this, &ALowTideCharacter::SellSlot2);
@@ -81,6 +83,18 @@ void ALowTideCharacter::LookUp(float Value)
     {
         AddControllerPitchInput(Value);
     }
+}
+
+void ALowTideCharacter::StartSprint()
+{
+    bSprinting = true;
+    GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+}
+
+void ALowTideCharacter::StopSprint()
+{
+    bSprinting = false;
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
 
 AActor* ALowTideCharacter::TraceInteractable() const
@@ -160,6 +174,12 @@ void ALowTideCharacter::CloseMenus()
 {
     ActiveTrader.Reset();
     bInventoryOpen = false;
+}
+
+void ALowTideCharacter::ResetMovementAfterRecovery()
+{
+    StopSprint();
+    GetCharacterMovement()->StopMovementImmediately();
 }
 
 void ALowTideCharacter::SellSlot(int32 Slot)

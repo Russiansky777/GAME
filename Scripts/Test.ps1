@@ -10,6 +10,13 @@ $reportFile = Get-Item (Join-Path $reportDirectory 'index.json')
 if ($reportFile.LastWriteTime -lt $started) { throw 'Test report is stale' }
 $report = Get-Content $reportFile.FullName -Raw | ConvertFrom-Json
 $report.tests | Select-Object fullTestPath, state | Format-Table -AutoSize
-if ($report.failed -ne 0 -or $report.notRun -ne 0 -or $report.inProcess -ne 0 -or ($report.succeeded + $report.succeededWithWarnings) -lt 3) {
+$requiredTests = @(
+    'LowTide.M05.Expedition.RoundTrip',
+    'LowTide.M05.Expedition.SafeEdgeReturn',
+    'LowTide.M05.Inventory.AtomicIndividualSale',
+    'LowTide.M05.Inventory.CapacityAndQuantityBoundaries'
+)
+$passedTests = @($report.tests | Where-Object { $_.state -eq 'Success' } | ForEach-Object fullTestPath)
+if ($report.failed -ne 0 -or $report.notRun -ne 0 -or $report.inProcess -ne 0 -or ($report.succeeded + $report.succeededWithWarnings) -lt 4 -or @($requiredTests | Where-Object { $_ -notin $passedTests }).Count -ne 0) {
     throw 'LOW TIDE automation did not pass all required tests'
 }

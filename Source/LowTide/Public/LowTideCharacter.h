@@ -26,12 +26,18 @@ public:
     void ShowFeedback(const FString& Message, float Duration = 3.0f);
     void OpenTrader(ATraderActor* Trader);
     void CloseMenus();
+    bool IsSprinting() const { return bSprinting; }
+    float GetWalkSpeed() const { return WalkSpeed; }
+    float GetSprintSpeed() const { return SprintSpeed; }
+    void ResetMovementAfterRecovery();
 
 private:
     void MoveForward(float Value);
     void MoveRight(float Value);
     void Turn(float Value);
     void LookUp(float Value);
+    void StartSprint();
+    void StopSprint();
     void Interact();
     void ToggleInventory();
     void QuitGame();
@@ -54,4 +60,8 @@ private:
     FString Feedback;
     float FeedbackUntil = 0.0f;
     bool bInventoryOpen = false;
+    bool bSprinting = false;
+
+    static constexpr float WalkSpeed = 500.0f;
+    static constexpr float SprintSpeed = WalkSpeed * 1.6f;
 };

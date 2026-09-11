@@ -2,11 +2,14 @@
 
 First-person coastal settlement greybox, one trader, one causeway to a salvage shelf. Objective: recover salvage during low tide and return to sell it. Walking/look, interaction prompt, pickup, minimal inventory and individual-sale UI.
 
-Provisional tuning for playtest:
+Provisional tuning implemented for Director acceptance; manual retest remains:
+- Hold Left Shift to sprint at about 1.6× walking speed. There is no stamina system.
 - High → falling → low → rising tide. Visible water and physical accessibility agree; timer/warning communicates remaining access.
+- The settlement, causeway and salvage shelf have a continuous physical perimeter. Sprinting through corners or across phase transitions must not escape the playable space.
 - Five test pickups: scrap metal, copper wire, sea glass, sealed supply tin and weathered evidence token. Stable IDs, names, descriptions, values and sellable flags. Evidence is kept and clearly marked unsellable.
 - Finite inventory capacity with clear full feedback. Sale explicitly shows price.
-- Stranded players return to shore and lose unsold salvage, retaining evidence. This is reversible greybox tuning, not a final story decision.
+- Give a clear warning before access closes and forced recovery can occur.
+- Stranded players return to shore and lose only ordinary, unsold salvage acquired during the current expedition. Evidence/quest-critical items, credits, and permanent state remain. This is reversible greybox tuning, not a final story decision.
 
 No creatures, combat, elaborate crafting, additional NPCs/story or advanced ocean. Story remains a Director decision; approved art direction is recorded below.
 

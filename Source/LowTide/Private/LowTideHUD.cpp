@@ -39,8 +39,10 @@ void ALowTideHUD::DrawHUD()
         DrawText(TideText, TideColor, 40.0f, 88.0f, GEngine->GetSmallFont(), 1.1f, false);
         if (Tide->IsClosingWarning())
         {
-            DrawRect(FLinearColor(0.22f, 0.02f, 0.01f, 0.88f), CenterX - 240.0f, 124.0f, 480.0f, 36.0f);
-            DrawText(TEXT("WARNING: LEAVE THE SHELF - THE TIDE IS CLOSING ACCESS"), FLinearColor(1.0f, 0.72f, 0.25f), CenterX - 220.0f, 133.0f, GEngine->GetSmallFont(), 1.0f, false);
+            DrawRect(FLinearColor(0.22f, 0.02f, 0.01f, 0.88f), CenterX - 270.0f, 124.0f, 540.0f, 36.0f);
+            DrawText(FString::Printf(TEXT("WARNING: RETURN TO SHORE - ACCESS CLOSES IN %d s"),
+                FMath::CeilToInt(Tide->GetSecondsUntilAccessCloses())), FLinearColor(1.0f, 0.72f, 0.25f),
+                CenterX - 250.0f, 133.0f, GEngine->GetSmallFont(), 1.0f, false);
         }
     }
 
@@ -61,7 +63,7 @@ void ALowTideHUD::DrawHUD()
     const ULowTideInventoryComponent* Inventory = Character->GetInventory();
     DrawText(FString::Printf(TEXT("PACK %d/%d     CREDITS %d"), Inventory->GetUsedCapacity(), Inventory->GetCapacity(), Inventory->GetCredits()),
         FLinearColor::White, 32.0f, Canvas->SizeY - 54.0f, GEngine->GetSmallFont(), 1.05f, false);
-    DrawText(TEXT("WASD move  |  Mouse look  |  E interact  |  I inventory  |  Esc quit"),
+    DrawText(TEXT("WASD move  |  Hold Left Shift sprint  |  E interact  |  I inventory  |  Esc quit"),
         FLinearColor(0.72f, 0.78f, 0.80f), 32.0f, Canvas->SizeY - 30.0f, GEngine->GetSmallFont(), 0.9f, false);
 
     if (Character->IsInventoryOpen() || Character->GetActiveTrader())

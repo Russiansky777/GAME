@@ -2,12 +2,16 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Components/InputComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "LowTideCharacter.h"
 #include "LowTideGameMode.h"
 #include "LowTideInventoryComponent.h"
@@ -88,6 +92,24 @@ TArray<APickupActor*> FindPickups(UWorld* World)
     }
     return Pickups;
 }
+
+bool ExecuteActionBinding(UInputComponent* InputComponent, FName ActionName, EInputEvent Event)
+{
+    if (!InputComponent)
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < InputComponent->GetNumActionBindings(); ++Index)
+    {
+        FInputActionBinding& Binding = InputComponent->GetActionBinding(Index);
+        if (Binding.GetActionName() == ActionName && Binding.KeyEvent == Event)
+        {
+            Binding.ActionDelegate.Execute(EKeys::LeftShift);
+            return true;
+        }
+    }
+    return false;
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLowTideExpeditionRoundTripTest,
@@ -117,6 +139,14 @@ bool FLowTideExpeditionRoundTripTest::RunTest(const FString& Parameters)
     Controller->Possess(Character);
     TestTrue(TEXT("Fixture has a local player controlling movement"), Character->IsLocallyControlled());
 
+    TestEqual(TEXT("Normal walk speed uses greybox tuning"), Character->GetCharacterMovement()->MaxWalkSpeed, Character->GetWalkSpeed());
+    TestTrue(TEXT("Sprint pressed binding exists and executes"), ExecuteActionBinding(Character->InputComponent, TEXT("Sprint"), IE_Pressed));
+    TestTrue(TEXT("Sprint remains active while held"), Character->IsSprinting());
+    TestEqual(TEXT("Held sprint is 1.6 times walking speed"), Character->GetCharacterMovement()->MaxWalkSpeed, Character->GetWalkSpeed() * 1.6f);
+    TestTrue(TEXT("Sprint released binding exists and executes"), ExecuteActionBinding(Character->InputComponent, TEXT("Sprint"), IE_Released));
+    TestFalse(TEXT("Sprint ends on release"), Character->IsSprinting());
+    TestEqual(TEXT("Release restores normal walk speed"), Character->GetCharacterMovement()->MaxWalkSpeed, Character->GetWalkSpeed());
+
     TestEqual(TEXT("Catalog has the five expedition definitions"), GameMode->GetItemCatalog().GetOrderedItems().Num(), 5);
     ATideController* Tide = GameMode->GetTideController();
     TestNotNull(TEXT("Tide controller is created by game mode"), Tide);
@@ -134,6 +164,112 @@ bool FLowTideExpeditionRoundTripTest::RunTest(const FString& Parameters)
     {
         return false;
     }
+
+
+    int32 BoundaryCount = 0;
+    for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+    {
+        BoundaryCount += It->ActorHasTag(TEXT("M05Boundary")) ? 1 : 0;
+    }
+    TestEqual(TEXT("All settlement, causeway and shelf perimeter sections are present"), BoundaryCount, 12);
+
+    const auto BoundaryCapsuleBlocks = [this, World](const FString& Label, const FVector& Start, const FVector& End)
+    {
+        FHitResult Hit;
+        FCollisionQueryParams Params(SCENE_QUERY_STAT(LowTideBoundaryTest), false);
+        const bool bHit = World->SweepSingleByChannel(Hit, Start, End, FQuat::Identity, ECC_Pawn,
+            FCollisionShape::MakeCapsule(42.0f, 92.0f), Params);
+        TestTrue(Label + TEXT(" blocks a player capsule"), bHit);
+        TestTrue(Label + TEXT(" hits the tagged perimeter rather than scene clutter"), bHit && Hit.GetActor() && Hit.GetActor()->ActorHasTag(TEXT("M05Boundary")));
+    };
+    const auto OpeningIsClear = [this, World](const FString& Label, const FVector& Start, const FVector& End)
+    {
+        FHitResult Hit;
+        FCollisionQueryParams Params(SCENE_QUERY_STAT(LowTideOpeningTest), false);
+        TestFalse(Label, World->SweepSingleByChannel(Hit, Start, End, FQuat::Identity, ECC_Pawn,
+            FCollisionShape::MakeCapsule(42.0f, 92.0f), Params));
+    };
+    constexpr float SweepZ = 210.0f;
+    for (const float Y : { -540.0f, 0.0f, 540.0f })
+    {
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Settlement west edge y %.0f"), Y), FVector(-640.0f, Y, SweepZ), FVector(-780.0f, Y, SweepZ));
+    }
+    for (const float X : { -600.0f, 0.0f, 600.0f })
+    {
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Settlement north edge x %.0f"), X), FVector(X, 530.0f, SweepZ), FVector(X, 680.0f, SweepZ));
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Settlement south edge x %.0f"), X), FVector(X, -530.0f, SweepZ), FVector(X, -680.0f, SweepZ));
+    }
+    for (const float Y : { -540.0f, -300.0f, -120.0f, 120.0f, 300.0f, 540.0f })
+    {
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Settlement east route wall y %.0f"), Y), FVector(630.0f, Y, SweepZ), FVector(780.0f, Y, SweepZ));
+    }
+    for (const float X : { 740.0f, 1000.0f, 1400.0f, 1800.0f, 2060.0f })
+    {
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Causeway north edge x %.0f"), X), FVector(X, 0.0f, SweepZ), FVector(X, 140.0f, SweepZ));
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Causeway south edge x %.0f"), X), FVector(X, 0.0f, SweepZ), FVector(X, -140.0f, SweepZ));
+    }
+    for (const float X : { 2160.0f, 2400.0f, 2700.0f, 3000.0f, 3240.0f })
+    {
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Shelf north edge x %.0f"), X), FVector(X, 630.0f, SweepZ), FVector(X, 780.0f, SweepZ));
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Shelf south edge x %.0f"), X), FVector(X, -630.0f, SweepZ), FVector(X, -780.0f, SweepZ));
+    }
+    for (const float Y : { -650.0f, -350.0f, -120.0f, 120.0f, 350.0f, 650.0f })
+    {
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Shelf west route wall y %.0f"), Y), FVector(2170.0f, Y, SweepZ), FVector(2020.0f, Y, SweepZ));
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Shelf east edge y %.0f"), Y), FVector(3230.0f, Y, SweepZ), FVector(3380.0f, Y, SweepZ));
+    }
+    const FVector CornerStarts[] = {
+        FVector(-630.0f, -530.0f, SweepZ), FVector(-630.0f, 530.0f, SweepZ),
+        FVector(630.0f, -530.0f, SweepZ), FVector(630.0f, 530.0f, SweepZ),
+        FVector(2170.0f, -630.0f, SweepZ), FVector(2170.0f, 630.0f, SweepZ),
+        FVector(3230.0f, -630.0f, SweepZ), FVector(3230.0f, 630.0f, SweepZ)
+    };
+    const FVector CornerEnds[] = {
+        FVector(-790.0f, -690.0f, SweepZ), FVector(-790.0f, 690.0f, SweepZ),
+        FVector(790.0f, -690.0f, SweepZ), FVector(790.0f, 690.0f, SweepZ),
+        FVector(2010.0f, -790.0f, SweepZ), FVector(2010.0f, 790.0f, SweepZ),
+        FVector(3390.0f, -790.0f, SweepZ), FVector(3390.0f, 790.0f, SweepZ)
+    };
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(CornerStarts); ++Index)
+    {
+        BoundaryCapsuleBlocks(FString::Printf(TEXT("Platform outside corner %d"), Index + 1), CornerStarts[Index], CornerEnds[Index]);
+    }
+    BoundaryCapsuleBlocks(TEXT("Settlement north route join"), FVector(640.0f, 20.0f, SweepZ), FVector(760.0f, 130.0f, SweepZ));
+    BoundaryCapsuleBlocks(TEXT("Settlement south route join"), FVector(640.0f, -20.0f, SweepZ), FVector(760.0f, -130.0f, SweepZ));
+    BoundaryCapsuleBlocks(TEXT("Shelf north route join"), FVector(2160.0f, 20.0f, SweepZ), FVector(2040.0f, 130.0f, SweepZ));
+    BoundaryCapsuleBlocks(TEXT("Shelf south route join"), FVector(2160.0f, -20.0f, SweepZ), FVector(2040.0f, -130.0f, SweepZ));
+    OpeningIsClear(TEXT("Settlement-to-causeway opening remains capsule-clear"), FVector(600.0f, 0.0f, SweepZ), FVector(800.0f, 0.0f, SweepZ));
+    OpeningIsClear(TEXT("Causeway-to-shelf opening remains capsule-clear"), FVector(2000.0f, 0.0f, SweepZ), FVector(2200.0f, 0.0f, SweepZ));
+
+    Character->SetActorLocation(FVector(0.0f, 500.0f, 190.0f), false, nullptr, ETeleportType::TeleportPhysics);
+    Character->GetCharacterMovement()->StopMovementImmediately();
+    TestTrue(TEXT("Sprint can be pressed for perimeter run"), ExecuteActionBinding(Character->InputComponent, TEXT("Sprint"), IE_Pressed));
+    for (int32 Frame = 0; Frame < 90; ++Frame)
+    {
+        Character->AddMovementInput(FVector::RightVector, 1.0f);
+        World->Tick(LEVELTICK_All, 1.0f / 60.0f);
+        ++GFrameCounter;
+    }
+    TestTrue(FString::Printf(TEXT("Settlement wall contains sprinting player (position %s)"), *Character->GetActorLocation().ToString()),
+        Character->GetActorLocation().Y < 570.0f && Character->GetActorLocation().Z > 150.0f);
+    TestTrue(TEXT("Sprint release executes after perimeter run"), ExecuteActionBinding(Character->InputComponent, TEXT("Sprint"), IE_Released));
+    Character->SetActorLocation(FVector(-300.0f, 0.0f, 190.0f), false, nullptr, ETeleportType::TeleportPhysics);
+    Character->GetCharacterMovement()->StopMovementImmediately();
+
+    const FItemDefinition& Scrap = GameMode->GetItemCatalog().GetOrderedItems()[0];
+    FString CarryoverReason;
+    TestTrue(TEXT("Fixture has two ordinary items from a prior completed trip"), Character->GetInventory()->TryAdd(Scrap.Id, 2, CarryoverReason));
+    ATraderActor* Trader = FindActor<ATraderActor>(World);
+    TestNotNull(TEXT("Settlement trader exists"), Trader);
+    if (!Trader)
+    {
+        return false;
+    }
+    Character->SetActorLocation(Trader->GetActorLocation());
+    TestTrue(TEXT("Prior trip earns permanent credits before departure"), Trader->TrySellSlot(Character, 0));
+    TestEqual(TEXT("One prior ordinary item remains unsold"), Character->GetInventory()->GetQuantity(Scrap.Id), 1);
+    TestEqual(TEXT("Prior trip credits exact catalog value"), Character->GetInventory()->GetCredits(), Scrap.Value);
+    Character->SetActorLocation(FVector(-300.0f, 0.0f, 190.0f), false, nullptr, ETeleportType::TeleportPhysics);
 
     // Exercise CharacterMovement against the actual path and return steps.
     for (int32 Frame = 0; Frame < 360; ++Frame)
@@ -161,36 +297,102 @@ bool FLowTideExpeditionRoundTripTest::RunTest(const FString& Parameters)
             TestFalse(TEXT("A claimed pickup cannot be collected twice"), Pickups[Index]->Interact(Character));
         }
     }
-    TestEqual(TEXT("Five collected items occupy five slots"), Character->GetInventory()->GetUsedCapacity(), 5);
+    TestEqual(TEXT("Five collected items plus prior stock fill six slots"), Character->GetInventory()->GetUsedCapacity(), 6);
 
-    ATraderActor* Trader = FindActor<ATraderActor>(World);
-    TestNotNull(TEXT("Settlement trader exists"), Trader);
-    if (!Trader)
+    const FItemDefinition& Evidence = GameMode->GetItemCatalog().GetOrderedItems()[4];
+    TestEqual(TEXT("Collected scrap sits beside prior ordinary stock"), Character->GetInventory()->GetQuantity(Scrap.Id), 2);
+    const FVector TraderSettlementLocation = Trader->GetActorLocation();
+    Trader->SetActorLocation(Character->GetActorLocation());
+    TestFalse(TEXT("Evidence is protected from sale"), Trader->TrySellSlot(Character, 4));
+    Trader->SetActorLocation(TraderSettlementLocation);
+    TestEqual(TEXT("Evidence remains after rejected trade"), Character->GetInventory()->GetQuantity(Evidence.Id), 1);
+    TestEqual(TEXT("Rejected evidence trade preserves prior credits"), Character->GetInventory()->GetCredits(), Scrap.Value);
+
+    Character->SetActorLocation(FVector(2800.0f, 0.0f, 65.0f));
+    const float AdvanceToWarning = Tide->GetSecondsUntilAccessCloses() - 19.0f;
+    Tide->Tick(AdvanceToWarning);
+    TestTrue(TEXT("Warning activates before route collision closes"), Tide->IsClosingWarning());
+    TestTrue(TEXT("Warning countdown reports actual open-access time"), FMath::IsNearlyEqual(Tide->GetSecondsUntilAccessCloses(), 19.0f, 0.2f));
+    TestTrue(TEXT("Route remains open during the warning"), Tide->IsAccessOpen());
+    TestTrue(TEXT("Sprint can be held when forced recovery begins"), ExecuteActionBinding(Character->InputComponent, TEXT("Sprint"), IE_Pressed));
+    Tide->Tick(Tide->GetSecondsUntilAccessCloses() + 0.1f);
+    TestTrue(TEXT("Closing access recovers a stranded player"), Character->GetActorLocation().X <= 650.0f);
+    TestEqual(TEXT("Recovery preserves prior ordinary stock and protected evidence"), Character->GetInventory()->GetUsedCapacity(), 2);
+    TestEqual(TEXT("Recovery preserves ordinary stock carried into this expedition"), Character->GetInventory()->GetQuantity(Scrap.Id), 1);
+    TestEqual(TEXT("Recovery keeps evidence"), Character->GetInventory()->GetQuantity(Evidence.Id), 1);
+    TestEqual(TEXT("Recovery keeps money earned before failure"), Character->GetInventory()->GetCredits(), Scrap.Value);
+    TestFalse(TEXT("Recovery clears held sprint state"), Character->IsSprinting());
+    TestTrue(TEXT("Recovery clears carried movement velocity"), Character->GetVelocity().IsNearlyZero());
+    TestTrue(TEXT("Recovery explains its trigger and retained permanent state"), Character->GetFeedback().Contains(TEXT("Access submerged"))
+        && Character->GetFeedback().Contains(TEXT("evidence and credits kept")));
+
+    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    TestEqual(TEXT("A second falling cycle reaches low tide"), Tide->GetLowCycle(), 2);
+    TArray<APickupActor*> SecondPickups = FindPickups(World);
+    TestEqual(TEXT("A second low cycle replenishes salvage without duplicating retained evidence"), SecondPickups.Num(), 4);
+    if (SecondPickups.Num() > 0)
+    {
+        Character->SetActorLocation(SecondPickups[0]->GetActorLocation());
+        TestTrue(TEXT("A second expedition can collect new salvage"), SecondPickups[0]->Interact(Character));
+        Character->SetActorLocation(FVector(-300.0f, 0.0f, 190.0f));
+        World->Tick(LEVELTICK_All, 1.0f / 60.0f);
+        ++GFrameCounter;
+        TestTrue(TEXT("Returning safely completes the second expedition with its salvage"), Character->GetInventory()->GetUsedCapacity() > 2);
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLowTideSafeEdgeReturnTest,
+    "LowTide.M05.Expedition.SafeEdgeReturn",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLowTideSafeEdgeReturnTest::RunTest(const FString& Parameters)
+{
+    FLowTideTestWorld TestWorld;
+    UWorld* World = TestWorld.World;
+    ALowTideGameMode* GameMode = World ? World->GetAuthGameMode<ALowTideGameMode>() : nullptr;
+    APlayerController* Controller = World ? World->SpawnActor<APlayerController>() : nullptr;
+    ALowTideCharacter* Character = World ? World->SpawnActor<ALowTideCharacter>(FVector(-300.0f, 0.0f, 190.0f), FRotator::ZeroRotator) : nullptr;
+    TestNotNull(TEXT("Safe-edge fixture game mode exists"), GameMode);
+    TestNotNull(TEXT("Safe-edge fixture controller exists"), Controller);
+    TestNotNull(TEXT("Safe-edge fixture character exists"), Character);
+    if (!GameMode || !Controller || !Character)
     {
         return false;
     }
-    Character->SetActorLocation(Trader->GetActorLocation());
-    const FItemDefinition& Scrap = GameMode->GetItemCatalog().GetOrderedItems()[0];
-    const FItemDefinition& Evidence = GameMode->GetItemCatalog().GetOrderedItems()[4];
-    TestTrue(TEXT("Trader sells a collected salvage slot at range"), Trader->TrySellSlot(Character, 0));
-    TestEqual(TEXT("Sale removes exactly one salvage item"), Character->GetInventory()->GetQuantity(Scrap.Id), 0);
-    TestEqual(TEXT("Sale credits the catalog value"), Character->GetInventory()->GetCredits(), Scrap.Value);
-    TestFalse(TEXT("Evidence is protected from sale"), Trader->TrySellSlot(Character, 4));
-    TestEqual(TEXT("Evidence remains after rejected trade"), Character->GetInventory()->GetQuantity(Evidence.Id), 1);
-    TestEqual(TEXT("Rejected evidence trade preserves credits"), Character->GetInventory()->GetCredits(), Scrap.Value);
+    Controller->SetPlayer(NewObject<ULocalPlayer>(GEngine));
+    Controller->Possess(Character);
 
-    Character->SetActorLocation(FVector(2800.0f, 0.0f, 65.0f));
-    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
-    Tide->Tick(15.0f);
-    TestTrue(TEXT("Closing access recovers a stranded player"), Character->GetActorLocation().X <= 650.0f);
-    TestEqual(TEXT("Recovery loses unsold salvage"), Character->GetInventory()->GetUsedCapacity(), 1);
-    TestEqual(TEXT("Recovery keeps evidence"), Character->GetInventory()->GetQuantity(Evidence.Id), 1);
-
-    Tide->Tick(15.0f);
-    Tide->Tick(10.0f);
+    ATideController* Tide = GameMode->GetTideController();
+    TestNotNull(TEXT("Safe-edge fixture tide exists"), Tide);
+    if (!Tide)
+    {
+        return false;
+    }
     Tide->Tick(20.1f);
-    TestEqual(TEXT("A second falling cycle reaches low tide"), Tide->GetLowCycle(), 2);
-    TestEqual(TEXT("A second low cycle replenishes salvage without duplicating retained evidence"), FindPickups(World).Num(), 4);
+    const FItemDefinition& Scrap = GameMode->GetItemCatalog().GetOrderedItems()[0];
+    FString Reason;
+
+    Character->SetActorLocation(FVector(800.0f, 0.0f, 190.0f));
+    World->Tick(LEVELTICK_All, 1.0f / 60.0f);
+    ++GFrameCounter;
+    TestTrue(TEXT("First trip collects one ordinary item"), Character->GetInventory()->TryAdd(Scrap.Id, 1, Reason));
+    Character->SetActorLocation(FVector(680.0f, 0.0f, 190.0f));
+    Tide->Tick(Tide->GetSecondsUntilAccessCloses() + 0.1f);
+    TestEqual(TEXT("Standing at X680 counts as safely back on shore at closure"), Character->GetInventory()->GetQuantity(Scrap.Id), 1);
+
+    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    Character->SetActorLocation(FVector(800.0f, 0.0f, 190.0f));
+    World->Tick(LEVELTICK_All, 1.0f / 60.0f);
+    ++GFrameCounter;
+    TestTrue(TEXT("Next trip collects another ordinary item"), Character->GetInventory()->TryAdd(Scrap.Id, 1, Reason));
+    Character->SetActorLocation(FVector(2800.0f, 0.0f, 190.0f));
+    Tide->Tick(Tide->GetSecondsUntilAccessCloses() + 0.1f);
+    TestEqual(TEXT("Later failure preserves stock banked by the X680 safe return"), Character->GetInventory()->GetQuantity(Scrap.Id), 1);
     return true;
 }
 

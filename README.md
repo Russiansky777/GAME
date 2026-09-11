@@ -23,9 +23,12 @@ Open `LowTide.uproject` to work in the editor. Play starts the C++ authored grey
 on the engine Entry map. Launch the packaged game with `Artifacts/Windows/LowTide.exe`.
 
 WASD moves, mouse looks, E interacts/closes trade, I opens/closes inventory,
-1–5 sells one matching item at Mara, Esc quits. Follow the causeway during low
-tide, collect salvage, return to the orange trader and sell. Water covering the
-path forces stranded players home and removes unsold salvage; evidence survives.
-The accelerated tide cycle repeats every two minutes. Sessions do not save yet.
+1–5 sells one matching item at Mara, Esc quits. Hold Left Shift to sprint at
+about 1.6× walking speed without stamina. The settlement, causeway and shelf
+have a closed playable perimeter, with a warning before tide recovery. Director
+manual retest remains. Follow the causeway during low tide, collect salvage, return to the
+orange trader and sell. The provisional recovery rule retains evidence, credits
+and permanent state while removing only ordinary unsold salvage from the current
+expedition. The accelerated tide cycle repeats every two minutes. Sessions do not save yet.
 
 See `Docs/CURRENT_STATE.md` for actual validation results and next steps.

@@ -61,9 +61,34 @@ void ALowTideGameMode::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
     ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr;
-    if (Character && Character->GetActorLocation().Z < -180.0f)
+    if (!Character)
+    {
+        return;
+    }
+
+    if (Character->GetActorLocation().Z < -180.0f)
     {
         RecoverStrandedPlayer();
+    }
+    else if (TideController && TideController->IsAccessOpen())
+    {
+        if (Character->GetActorLocation().X > SettlementEdgeX)
+        {
+            BeginExpeditionIfNeeded(Character);
+        }
+        else if (bExpeditionActive && Character->GetActorLocation().X <= SettlementReturnX)
+        {
+            CompleteExpedition();
+        }
+    }
+}
+
+void ALowTideGameMode::SpawnInvisibleBoundary(const FVector& Location, const FVector& Scale)
+{
+    if (AStaticMeshActor* Boundary = SpawnPrimitive(CubeMesh, Location, Scale, FLinearColor::Transparent, true))
+    {
+        Boundary->Tags.Add(TEXT("M05Boundary"));
+        Boundary->SetActorHiddenInGame(true);
     }
 }
 
@@ -111,6 +136,23 @@ void ALowTideGameMode::BuildGreybox()
     SpawnPrimitive(CubeMesh, FVector(2700.0f, 0.0f, 5.0f), FVector(12.0f, 14.0f, 0.5f), Rock, true);
     SpawnPrimitive(CubeMesh, FVector(760.0f, 0.0f, 40.0f), FVector(1.2f, 1.4f, 0.4f), Path, true);
     SpawnPrimitive(CubeMesh, FVector(880.0f, 0.0f, 20.0f), FVector(1.2f, 1.4f, 0.4f), Path, true);
+
+    // Temporary invisible containment follows every exposed edge, with openings only at the intended route joins.
+    constexpr float BoundaryZ = 150.0f;
+    SpawnInvisibleBoundary(FVector(-710.0f, 0.0f, BoundaryZ), FVector(0.2f, 12.2f, 4.0f));
+    SpawnInvisibleBoundary(FVector(0.0f, -610.0f, BoundaryZ), FVector(14.2f, 0.2f, 4.0f));
+    SpawnInvisibleBoundary(FVector(0.0f, 610.0f, BoundaryZ), FVector(14.2f, 0.2f, 4.0f));
+    SpawnInvisibleBoundary(FVector(710.0f, -340.0f, BoundaryZ), FVector(0.2f, 5.4f, 4.0f));
+    SpawnInvisibleBoundary(FVector(710.0f, 340.0f, BoundaryZ), FVector(0.2f, 5.4f, 4.0f));
+
+    SpawnInvisibleBoundary(FVector(1400.0f, -80.0f, BoundaryZ), FVector(14.0f, 0.2f, 4.0f));
+    SpawnInvisibleBoundary(FVector(1400.0f, 80.0f, BoundaryZ), FVector(14.0f, 0.2f, 4.0f));
+
+    SpawnInvisibleBoundary(FVector(2700.0f, -710.0f, BoundaryZ), FVector(12.2f, 0.2f, 4.0f));
+    SpawnInvisibleBoundary(FVector(2700.0f, 710.0f, BoundaryZ), FVector(12.2f, 0.2f, 4.0f));
+    SpawnInvisibleBoundary(FVector(3310.0f, 0.0f, BoundaryZ), FVector(0.2f, 14.2f, 4.0f));
+    SpawnInvisibleBoundary(FVector(2090.0f, -390.0f, BoundaryZ), FVector(0.2f, 6.4f, 4.0f));
+    SpawnInvisibleBoundary(FVector(2090.0f, 390.0f, BoundaryZ), FVector(0.2f, 6.4f, 4.0f));
 
     // Settlement huts frame the safe shore and use only cooked engine primitives.
     SpawnPrimitive(CubeMesh, FVector(-300.0f, -430.0f, 180.0f), FVector(3.0f, 2.4f, 2.0f), Wood, true);
@@ -174,6 +216,30 @@ void ALowTideGameMode::BuildGreybox()
         TideController->OnPhaseChanged.AddUObject(this, &ALowTideGameMode::HandleTidePhaseChanged);
         TideController->OnAccessChanged.AddUObject(this, &ALowTideGameMode::HandleAccessChanged);
     }
+}
+
+void ALowTideGameMode::BeginExpeditionIfNeeded(const ALowTideCharacter* Character)
+{
+    if (bExpeditionActive || !Character)
+    {
+        return;
+    }
+
+    ExpeditionStartQuantities.Reset();
+    for (const FItemDefinition& Item : ItemCatalog.GetOrderedItems())
+    {
+        if (Item.bSellable)
+        {
+            ExpeditionStartQuantities.Add(Item.Id, Character->GetInventory()->GetQuantity(Item.Id));
+        }
+    }
+    bExpeditionActive = true;
+}
+
+void ALowTideGameMode::CompleteExpedition()
+{
+    bExpeditionActive = false;
+    ExpeditionStartQuantities.Reset();
 }
 
 void ALowTideGameMode::SpawnSalvageForCycle()
@@ -254,6 +320,12 @@ void ALowTideGameMode::HandleAccessChanged(bool bOpen)
     if (!bOpen)
     {
         RecoverStrandedPlayer();
+        APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+        const ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr;
+        if (Character && Character->GetActorLocation().X <= SettlementEdgeX)
+        {
+            CompleteExpedition();
+        }
     }
 }
 
@@ -261,7 +333,7 @@ void ALowTideGameMode::RecoverStrandedPlayer()
 {
     APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
     ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr;
-    if (!Character || (Character->GetActorLocation().X <= 650.0f && Character->GetActorLocation().Z >= -180.0f))
+    if (!Character || (Character->GetActorLocation().X <= SettlementEdgeX && Character->GetActorLocation().Z >= -180.0f))
     {
         return;
     }
@@ -269,17 +341,20 @@ void ALowTideGameMode::RecoverStrandedPlayer()
     int32 LostCount = 0;
     for (const FItemDefinition& Item : ItemCatalog.GetOrderedItems())
     {
-        if (Item.bSellable)
+        if (Item.bSellable && bExpeditionActive)
         {
             const int32 Quantity = Character->GetInventory()->GetQuantity(Item.Id);
-            if (Quantity > 0 && Character->GetInventory()->TryRemove(Item.Id, Quantity))
+            const int32 ExpeditionQuantity = FMath::Max(0, Quantity - ExpeditionStartQuantities.FindRef(Item.Id));
+            if (ExpeditionQuantity > 0 && Character->GetInventory()->TryRemove(Item.Id, ExpeditionQuantity))
             {
-                LostCount += Quantity;
+                LostCount += ExpeditionQuantity;
             }
         }
     }
 
     Character->CloseMenus();
+    Character->ResetMovementAfterRecovery();
     Character->SetActorLocation(SafePlayerLocation, false, nullptr, ETeleportType::TeleportPhysics);
-    Character->ShowFeedback(FString::Printf(TEXT("The tide returned you to settlement. Lost %d unsold salvage; evidence kept."), LostCount), 7.0f);
+    CompleteExpedition();
+    Character->ShowFeedback(FString::Printf(TEXT("Access submerged. Recovered to shore: lost %d expedition salvage; evidence and credits kept."), LostCount), 7.0f);
 }
