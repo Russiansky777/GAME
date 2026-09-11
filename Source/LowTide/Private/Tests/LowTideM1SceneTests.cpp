@@ -5,6 +5,7 @@
 #include "CoastalScene.h"
 #include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -218,6 +219,36 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
     }
 
     TestNotNull(TEXT("Mara is returned by the scene layout"), Layout.Mara.Get());
+    ACoastalScene* TraderHubScene = nullptr;
+    for (TActorIterator<ACoastalScene> It(World); It; ++It)
+    {
+        TraderHubScene = *It;
+        break;
+    }
+    TestNotNull(TEXT("Authored coastal scene exists for trader hub"), TraderHubScene);
+    if (TraderHubScene)
+    {
+        TInlineComponentArray<UStaticMeshComponent*> HubMeshes(TraderHubScene);
+        int32 TraderHubMeshCount = 0;
+        for (const UStaticMeshComponent* Mesh : HubMeshes)
+        {
+            TraderHubMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("TraderHubMesh")) ? 1 : 0;
+        }
+        TestEqual(TEXT("Approved trader hub loads all seven authored meshes"), TraderHubMeshCount, 7);
+
+        TInlineComponentArray<UBoxComponent*> HubBoxes(TraderHubScene);
+        int32 TraderHubProxyCount = 0;
+        for (const UBoxComponent* Box : HubBoxes)
+        {
+            if (Box && Box->ComponentTags.Contains(TEXT("TraderHubCollision")))
+            {
+                ++TraderHubProxyCount;
+                TestTrue(TEXT("Trader hub collision is owned by the coastal scene, not Mara"),
+                    Box->GetOwner() != Layout.Mara.Get());
+            }
+        }
+        TestEqual(TEXT("Trader hub has exactly three structural wall proxies"), TraderHubProxyCount, 3);
+    }
     if (Layout.Mara)
     {
         const FVector MaraLocation = Layout.Mara->GetActorLocation();

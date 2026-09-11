@@ -956,13 +956,13 @@ FString ALowTideGameMode::GetObjectiveText() const
     switch (MissionState)
     {
     case EM1MissionState::NotAccepted:
-        return TEXT("MISSION: Speak with Mara at the orange lookout.");
+        return TEXT("MISSION: Speak with Mara at the striped salvage shop.");
     case EM1MissionState::FindLogbook:
         return TEXT("OBJECTIVE: Follow amber markers to the signal station and recover its logbook.");
     case EM1MissionState::ReturnToMara:
         return bRareArtifactClaimed || bRareArtifactResolved
-            ? TEXT("LOGBOOK SECURED: the station answered a signal before it was sent. Return it to Mara at the orange lookout.")
-            : TEXT("LOGBOOK SECURED: the station answered a signal before it was sent. Return it to Mara at the orange lookout. Optional: the Singing Shard is worth 180 credits.");
+            ? TEXT("LOGBOOK SECURED: the station answered a signal before it was sent. Return it to Mara at the striped salvage shop.")
+            : TEXT("LOGBOOK SECURED: the station answered a signal before it was sent. Return it to Mara at the striped salvage shop. Optional: the Singing Shard is worth 180 credits.");
     case EM1MissionState::Complete:
         return !bRareArtifactClaimed && !bRareArtifactResolved
             ? TEXT("MISSION COMPLETE: Mara paid 75 credits. Optional: the Singing Shard remains in the cove, worth 180 credits.")

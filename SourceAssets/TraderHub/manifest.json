@@ -1,0 +1,798 @@
+{
+  "assetFamily": "LOW TIDE Stylized Coastal Trader Hub",
+  "authorship": "Project-authored procedural mesh; no external assets or textures.",
+  "generator": "Scripts/GenerateTraderHub.py",
+  "blenderVersion": "5.2.1 LTS",
+  "units": "centimeters",
+  "orientationAuthored": {
+    "up": "+Z",
+    "rearAwayFromPlayer": "+X",
+    "right": "+Y",
+    "frontTowardPlayer": "-X"
+  },
+  "unrealPlacement": {
+    "worldLocationCm": [
+      900.0,
+      -1350.0,
+      125.0
+    ],
+    "yawDegrees": -38.0
+  },
+  "maraReference": {
+    "localXYCm": [
+      0.0,
+      0.0
+    ],
+    "localFootZCm": 90.0,
+    "worldReference": [
+      900.0,
+      -1350.0,
+      215.0
+    ]
+  },
+  "objImport": {
+    "preReflectedY": true,
+    "reason": "Unreal OBJ import reflects Y; export reflection restores authored +Y right.",
+    "importUniformScale": 1.0,
+    "combineMeshes": true,
+    "generateCollision": false,
+    "importMaterials": false
+  },
+  "palette": {
+    "WeatheredCream": [
+      0.72,
+      0.62,
+      0.46
+    ],
+    "TealPaint": [
+      0.055,
+      0.3,
+      0.31
+    ],
+    "RustCanvas": [
+      0.66,
+      0.2,
+      0.095
+    ],
+    "CreamCanvas": [
+      0.91,
+      0.72,
+      0.45
+    ],
+    "DarkWood": [
+      0.18,
+      0.095,
+      0.055
+    ],
+    "Brass": [
+      0.66,
+      0.42,
+      0.12
+    ],
+    "Rope": [
+      0.55,
+      0.39,
+      0.2
+    ],
+    "MapPaper": [
+      0.78,
+      0.66,
+      0.43
+    ]
+  },
+  "materials": [
+    {
+      "slot": "WeatheredCream",
+      "baseColorLinearRGBA": [
+        0.72,
+        0.62,
+        0.46,
+        1.0
+      ],
+      "finish": "stylized clean rough"
+    },
+    {
+      "slot": "TealPaint",
+      "baseColorLinearRGBA": [
+        0.055,
+        0.3,
+        0.31,
+        1.0
+      ],
+      "finish": "stylized clean rough"
+    },
+    {
+      "slot": "RustCanvas",
+      "baseColorLinearRGBA": [
+        0.66,
+        0.2,
+        0.095,
+        1.0
+      ],
+      "finish": "stylized clean rough"
+    },
+    {
+      "slot": "CreamCanvas",
+      "baseColorLinearRGBA": [
+        0.91,
+        0.72,
+        0.45,
+        1.0
+      ],
+      "finish": "stylized clean rough"
+    },
+    {
+      "slot": "DarkWood",
+      "baseColorLinearRGBA": [
+        0.18,
+        0.095,
+        0.055,
+        1.0
+      ],
+      "finish": "stylized clean rough"
+    },
+    {
+      "slot": "Brass",
+      "baseColorLinearRGBA": [
+        0.66,
+        0.42,
+        0.12,
+        1.0
+      ],
+      "finish": "worn stylized metal"
+    },
+    {
+      "slot": "Rope",
+      "baseColorLinearRGBA": [
+        0.55,
+        0.39,
+        0.2,
+        1.0
+      ],
+      "finish": "stylized clean rough"
+    },
+    {
+      "slot": "MapPaper",
+      "baseColorLinearRGBA": [
+        0.78,
+        0.66,
+        0.43,
+        1.0
+      ],
+      "finish": "stylized clean rough"
+    }
+  ],
+  "components": [
+    {
+      "name": "SM_LT_TraderHub_Structure",
+      "source": "SM_LT_TraderHub_Structure.obj",
+      "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Structure",
+      "materials": [
+        "DarkWood",
+        "Brass",
+        "WeatheredCream",
+        "TealPaint"
+      ],
+      "sourceFile": "SM_LT_TraderHub_Structure.obj",
+      "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Structure",
+      "commonOriginCm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounds": {
+        "min": [
+          -156.0,
+          -373.28,
+          0.0
+        ],
+        "max": [
+          510.0,
+          368.7,
+          675.5
+        ]
+      },
+      "boundsUnrealImported": {
+        "min": [
+          -156.0,
+          -373.28,
+          0.0
+        ],
+        "max": [
+          510.0,
+          368.7,
+          675.5
+        ]
+      },
+      "boundsObjPreReflected": {
+        "min": [
+          -156.0,
+          -368.7,
+          0.0
+        ],
+        "max": [
+          510.0,
+          373.28,
+          675.5
+        ]
+      },
+      "boundsCmAuthored": {
+        "min": [
+          -156.0,
+          -373.28,
+          0.0
+        ],
+        "max": [
+          510.0,
+          368.7,
+          675.5
+        ]
+      },
+      "vertices": 3660,
+      "triangles": 6964,
+      "materialSlots": [
+        "DarkWood",
+        "Brass",
+        "WeatheredCream",
+        "TealPaint"
+      ],
+      "collision": "none; import as non-colliding dressing"
+    },
+    {
+      "name": "SM_LT_TraderHub_Awning",
+      "source": "SM_LT_TraderHub_Awning.obj",
+      "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Awning",
+      "materials": [
+        "RustCanvas",
+        "CreamCanvas",
+        "Brass",
+        "DarkWood",
+        "Rope"
+      ],
+      "sourceFile": "SM_LT_TraderHub_Awning.obj",
+      "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Awning",
+      "commonOriginCm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounds": {
+        "min": [
+          -234.0,
+          -312.5,
+          237.23
+        ],
+        "max": [
+          -46.0,
+          312.5,
+          374.0
+        ]
+      },
+      "boundsUnrealImported": {
+        "min": [
+          -234.0,
+          -312.5,
+          237.23
+        ],
+        "max": [
+          -46.0,
+          312.5,
+          374.0
+        ]
+      },
+      "boundsObjPreReflected": {
+        "min": [
+          -234.0,
+          -312.5,
+          237.23
+        ],
+        "max": [
+          -46.0,
+          312.5,
+          374.0
+        ]
+      },
+      "boundsCmAuthored": {
+        "min": [
+          -234.0,
+          -312.5,
+          237.23
+        ],
+        "max": [
+          -46.0,
+          312.5,
+          374.0
+        ]
+      },
+      "vertices": 1848,
+      "triangles": 3584,
+      "materialSlots": [
+        "RustCanvas",
+        "CreamCanvas",
+        "Brass",
+        "DarkWood",
+        "Rope"
+      ],
+      "collision": "none; import as non-colliding dressing"
+    },
+    {
+      "name": "SM_LT_TraderHub_Counter",
+      "source": "SM_LT_TraderHub_Counter.obj",
+      "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Counter",
+      "materials": [
+        "DarkWood",
+        "TealPaint",
+        "WeatheredCream",
+        "Brass",
+        "RustCanvas"
+      ],
+      "sourceFile": "SM_LT_TraderHub_Counter.obj",
+      "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Counter",
+      "commonOriginCm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounds": {
+        "min": [
+          -148.0,
+          -314.5,
+          0.0
+        ],
+        "max": [
+          437.5,
+          314.5,
+          384.0
+        ]
+      },
+      "boundsUnrealImported": {
+        "min": [
+          -148.0,
+          -314.5,
+          0.0
+        ],
+        "max": [
+          437.5,
+          314.5,
+          384.0
+        ]
+      },
+      "boundsObjPreReflected": {
+        "min": [
+          -148.0,
+          -314.5,
+          0.0
+        ],
+        "max": [
+          437.5,
+          314.5,
+          384.0
+        ]
+      },
+      "boundsCmAuthored": {
+        "min": [
+          -148.0,
+          -314.5,
+          0.0
+        ],
+        "max": [
+          437.5,
+          314.5,
+          384.0
+        ]
+      },
+      "vertices": 592,
+      "triangles": 1112,
+      "materialSlots": [
+        "DarkWood",
+        "TealPaint",
+        "WeatheredCream",
+        "Brass",
+        "RustCanvas"
+      ],
+      "collision": "none; import as non-colliding dressing"
+    },
+    {
+      "name": "SM_LT_TraderHub_Storage",
+      "source": "SM_LT_TraderHub_Storage.obj",
+      "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Storage",
+      "materials": [
+        "WeatheredCream",
+        "TealPaint",
+        "DarkWood",
+        "Brass"
+      ],
+      "sourceFile": "SM_LT_TraderHub_Storage.obj",
+      "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Storage",
+      "commonOriginCm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounds": {
+        "min": [
+          260.0,
+          -284.0,
+          0.0
+        ],
+        "max": [
+          451.5,
+          299.64,
+          152.0
+        ]
+      },
+      "boundsUnrealImported": {
+        "min": [
+          260.0,
+          -284.0,
+          0.0
+        ],
+        "max": [
+          451.5,
+          299.64,
+          152.0
+        ]
+      },
+      "boundsObjPreReflected": {
+        "min": [
+          260.0,
+          -299.64,
+          0.0
+        ],
+        "max": [
+          451.5,
+          284.0,
+          152.0
+        ]
+      },
+      "boundsCmAuthored": {
+        "min": [
+          260.0,
+          -284.0,
+          0.0
+        ],
+        "max": [
+          451.5,
+          299.64,
+          152.0
+        ]
+      },
+      "vertices": 2300,
+      "triangles": 4320,
+      "materialSlots": [
+        "WeatheredCream",
+        "TealPaint",
+        "DarkWood",
+        "Brass"
+      ],
+      "collision": "none; import as non-colliding dressing"
+    },
+    {
+      "name": "SM_LT_TraderHub_Nautical",
+      "source": "SM_LT_TraderHub_Nautical.obj",
+      "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Nautical",
+      "materials": [
+        "Rope",
+        "Brass"
+      ],
+      "sourceFile": "SM_LT_TraderHub_Nautical.obj",
+      "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Nautical",
+      "commonOriginCm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounds": {
+        "min": [
+          67.6,
+          -374.44,
+          1.01
+        ],
+        "max": [
+          331.17,
+          331.31,
+          319.4
+        ]
+      },
+      "boundsUnrealImported": {
+        "min": [
+          67.6,
+          -374.44,
+          1.01
+        ],
+        "max": [
+          331.17,
+          331.31,
+          319.4
+        ]
+      },
+      "boundsObjPreReflected": {
+        "min": [
+          67.6,
+          -331.31,
+          1.01
+        ],
+        "max": [
+          331.17,
+          374.44,
+          319.4
+        ]
+      },
+      "boundsCmAuthored": {
+        "min": [
+          67.6,
+          -374.44,
+          1.01
+        ],
+        "max": [
+          331.17,
+          331.31,
+          319.4
+        ]
+      },
+      "vertices": 1796,
+      "triangles": 3340,
+      "materialSlots": [
+        "Rope",
+        "Brass"
+      ],
+      "collision": "none; import as non-colliding dressing"
+    },
+    {
+      "name": "SM_LT_TraderHub_Workbench",
+      "source": "SM_LT_TraderHub_Workbench.obj",
+      "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Workbench",
+      "materials": [
+        "DarkWood",
+        "WeatheredCream",
+        "MapPaper",
+        "TealPaint",
+        "Brass",
+        "CreamCanvas"
+      ],
+      "sourceFile": "SM_LT_TraderHub_Workbench.obj",
+      "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Workbench",
+      "commonOriginCm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounds": {
+        "min": [
+          212.5,
+          -197.5,
+          -0.18
+        ],
+        "max": [
+          397.5,
+          -35.0,
+          220.02
+        ]
+      },
+      "boundsUnrealImported": {
+        "min": [
+          212.5,
+          -197.5,
+          -0.18
+        ],
+        "max": [
+          397.5,
+          -35.0,
+          220.02
+        ]
+      },
+      "boundsObjPreReflected": {
+        "min": [
+          212.5,
+          35.0,
+          -0.18
+        ],
+        "max": [
+          397.5,
+          197.5,
+          220.02
+        ]
+      },
+      "boundsCmAuthored": {
+        "min": [
+          212.5,
+          -197.5,
+          -0.18
+        ],
+        "max": [
+          397.5,
+          -35.0,
+          220.02
+        ]
+      },
+      "vertices": 748,
+      "triangles": 1408,
+      "materialSlots": [
+        "DarkWood",
+        "WeatheredCream",
+        "MapPaper",
+        "TealPaint",
+        "Brass",
+        "CreamCanvas"
+      ],
+      "collision": "none; import as non-colliding dressing"
+    },
+    {
+      "name": "SM_LT_TraderHub_Sign",
+      "source": "SM_LT_TraderHub_Sign.obj",
+      "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Sign",
+      "materials": [
+        "TealPaint",
+        "WeatheredCream",
+        "Rope",
+        "Brass",
+        "RustCanvas"
+      ],
+      "sourceFile": "SM_LT_TraderHub_Sign.obj",
+      "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Sign",
+      "commonOriginCm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bounds": {
+        "min": [
+          -156.0,
+          -142.0,
+          455.0
+        ],
+        "max": [
+          -68.97,
+          142.0,
+          622.5
+        ]
+      },
+      "boundsUnrealImported": {
+        "min": [
+          -156.0,
+          -142.0,
+          455.0
+        ],
+        "max": [
+          -68.97,
+          142.0,
+          622.5
+        ]
+      },
+      "boundsObjPreReflected": {
+        "min": [
+          -156.0,
+          -142.0,
+          455.0
+        ],
+        "max": [
+          -68.97,
+          142.0,
+          622.5
+        ]
+      },
+      "boundsCmAuthored": {
+        "min": [
+          -156.0,
+          -142.0,
+          455.0
+        ],
+        "max": [
+          -68.97,
+          142.0,
+          622.5
+        ]
+      },
+      "vertices": 2644,
+      "triangles": 4416,
+      "materialSlots": [
+        "TealPaint",
+        "WeatheredCream",
+        "Rope",
+        "Brass",
+        "RustCanvas"
+      ],
+      "collision": "none; import as non-colliding dressing"
+    }
+  ],
+  "totalTriangles": 25144,
+  "triangleBudget": {
+    "target": 40000,
+    "withinBudget": true
+  },
+  "collision_proxies": [
+    {
+      "name": "RearWall",
+      "center": [
+        442.0,
+        0.0,
+        260.0
+      ],
+      "extent": [
+        22.0,
+        306.0,
+        225.0
+      ]
+    },
+    {
+      "name": "LeftSideWall",
+      "center": [
+        225.0,
+        -312.0,
+        190.0
+      ],
+      "extent": [
+        178.0,
+        18.0,
+        170.0
+      ]
+    },
+    {
+      "name": "RightSideWall",
+      "center": [
+        225.0,
+        312.0,
+        190.0
+      ],
+      "extent": [
+        178.0,
+        18.0,
+        170.0
+      ]
+    }
+  ],
+  "interactionClearance": {
+    "frontApproach": "open from local -X",
+    "counterCenterOpeningCm": {
+      "yMin": -66.0,
+      "yMax": 66.0,
+      "topClearFromZ": 34.0
+    },
+    "noFloorElevation": true
+  },
+  "reviewImages": [
+    "Artifacts/TraderHubPreview/TraderHub_FirstPerson.png",
+    "Artifacts/TraderHubPreview/TraderHub_Overview.png"
+  ],
+  "collisionProxyBoxesCm": [
+    {
+      "name": "RearWall",
+      "center": [
+        442.0,
+        0.0,
+        260.0
+      ],
+      "extent": [
+        22.0,
+        306.0,
+        225.0
+      ]
+    },
+    {
+      "name": "LeftSideWall",
+      "center": [
+        225.0,
+        -312.0,
+        190.0
+      ],
+      "extent": [
+        178.0,
+        18.0,
+        170.0
+      ]
+    },
+    {
+      "name": "RightSideWall",
+      "center": [
+        225.0,
+        312.0,
+        190.0
+      ],
+      "extent": [
+        178.0,
+        18.0,
+        170.0
+      ]
+    }
+  ]
+}

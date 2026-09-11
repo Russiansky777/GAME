@@ -2,24 +2,23 @@
 
 ## Active milestone
 
-M0.5 is Director-accepted. M1 remains a candidate for Director visual/gameplay evaluation. The current checkpoint is the Director-authorized bounded hero-landmark / first-impression pass, not whole-world art, final polish or M2.
+M0.5 is Director-accepted. M1 remains a candidate. The Director rejected the previous primitive landmark pass as visually insufficient. This checkpoint replaces the trader shop with a focused authored environment; no whole-world art or M2 is authorized.
 
-## Landmark pass
+## Focused trader hub
 
-- Mara's existing stall gains continuous colored awning strips, ground-to-roof supports, a painted counter fascia, backed sign and harbor pennant. Nearby barrel placement is corrected. Mara remains a placeholder.
-- A shoulder-clear gateway and compact markers frame the initial tide-road departure. Existing amber outward and blue return cues, route surfaces and tide access remain authoritative.
-- The signal station gains aligned cream/teal wall panels, coral accents and a connected tiered crown/semaphore silhouette. The front/desk approach remains open.
-- The optional Singing Shard site gains a dark asymmetric arch behind the pickup, low stone accents and restrained colored insets. The actual collectible and its existing pickup/phenomenon behavior are unchanged.
-- All additions live in the non-colliding `ACoastalDressing` HISM layer. Existing meshes/master material are reused; one additional opaque violet instance family, no new textures, lights, downloaded assets, terrain imports, plugins or runtime systems. Authorship is recorded in ASSET_PROVENANCE.
-- Deliberately deferred whole-island art, dense foliage, final NPC/UI, additional missions/mechanics and large prop libraries. This is an incremental visual candidate; commercial art quality is still a Director judgment.
+- Seven reusable Blender-authored meshes replace the primitive stall: curved wooden roof/framing, striped sagging canvas, counter, storage, nautical dressing, workbench and raised SALVAGE sign. 25,144 triangles, eight palette instances of the existing opaque master, no new textures or lights. Source generator, OBJ/MTL exports and import manifest are retained.
+- Mara and the shop move together to (900,-1350), preserving their floor heights and clearing the initial expedition route. Three rear/side wall proxies belong to the scene, leaving the front trade approach open. Decorative meshes remain non-colliding.
+- Removed the superseded stall, floating location labels and overhead route frame. Compact outward/return markers and existing distant signal-station/shrine landmarks remain. Gameplay timings, rewards, movement and routes are unchanged.
+- Actual UE review caught and corrected mirrored sign lettering; automation caught and corrected a side wall obstructing the route. Final tests and packaged visual review pass. The prior pass remains Director-rejected, and this replacement still requires Director art judgment.
+- Project-authored assets cost EUR 0. Bundled Inter is converted to sign mesh with SIL OFL notice in INTER_FONT_LICENSE; no marketplace purchase or external environment kit. Provenance is recorded in ASSET_PROVENANCE.
 
 ## Validation
 
-- Final Editor build passed in 29.53 seconds. `Scripts/Test.ps1` report at 2026-09-11 20:37:43 UTC: 11/11 passed, no failures. Existing movement, route containment, interaction visibility, reward/rare choices and recovery/second-expedition regressions retained. No new tests were added for static decorative transforms.
-- Windows BuildCookRun passed in 173.83 seconds, exit 0; cook zero errors/warnings. Launcher `Artifacts/Windows/LowTide.exe` timestamp 20:40:06 UTC, UTOC 20:40:44 UTC. Source/staged Items.json hashes match.
-- Six fresh packaged 1280x720 views (hub, gateway approach, opening route, shore overview, station, shrine) inspected in `Artifacts/LandmarkReview/packaged`. All six capture launches exited 0, with no errors/fatals; only the existing Unreal `r.MotionVectorSimulation` warning. Before/after views caught and corrected detached awning/crown pieces and shrine trim. These are positioned-camera reviews, not a fresh manual expedition.
-- Same stationary shore 1080p CSV comparison, 900 frames each with first 300 excluded: baseline 19.007 ms / 52.61 FPS, final 19.363 ms / 51.65 FPS; p95 frame time 20.576→22.111 ms. Mean draw calls 190.4→199.4. About 1.9% mean frame-time increase in this short sample; not a full-route benchmark or low-end GPU certification. Profiler logs confirm normal exit. Evidence: `Artifacts/LandmarkReview/performance-summary.json` and raw CSV/logs.
-- Dressing instances 167→242 (+75), using eight HISM families instead of seven. No renderer setting changes.
+Final Editor compile passed in 41.30 seconds. Fresh automation at 21:23:29 UTC passed all 11 tests, including required hub assets/proxies, route containment, Mara visibility, movement, mission/reward, tide recovery, protected evidence and second-trip regressions.
+- Windows BuildCookRun passed in 213.28 seconds, exit 0; cook zero errors/warnings. Launcher timestamp 21:26:35 UTC, UTOC 21:27:13 UTC. Source/staged Items.json hashes match. Playable executable: `Artifacts/Windows/LowTide.exe`.
+- Five fresh packaged 1280x720 captures (start, facade approach, departure, route entry and shore overview) were inspected under `Artifacts/HubQuality/packaged`; all launches exited 0. SALVAGE reads correctly, shop supports reach the ground and the shop no longer obstructs departure. Runtime logs contain no errors/fatals; existing Unreal `r.MotionVectorSimulation` warning remains. These are positioned-camera checks, not a manual playthrough.
+- Same stationary shore 1080p capture, 900 frames with first 300 excluded: mean 19.386 ms / 51.58 FPS, p95 20.951 ms; mean draw calls 290. Prior short sample was 19.363 ms / 51.65 FPS and 199.4 draw calls. Frame time is similar in these samples, but draw calls increased; this is not a full-route benchmark or low-end GPU certification. Evidence: `Artifacts/HubQuality/performance-summary.json` and raw CSV/logs.
+- Existing decorative instances decrease 242 to 202 alongside the seven new authored mesh components. Terrain stays 2,908 triangles. No renderer-setting changes. Import validates all seven mesh bounds and palette slots; font/source provenance is retained.
 
 ## Preserved gameplay / previous evidence
 
@@ -30,10 +29,10 @@ M0.5 is Director-accepted. M1 remains a candidate for Director visual/gameplay e
 
 ## Limits and next action
 
-Wait for Director evaluation of the new package: first impression, safe-shop identity, opening path/destination readability, optional-area temptation, pickup/phenomenon clarity, movement feel and the full expedition loop. The 8–12 minute first-play target is not a measured manual result. Automated input/traversal and positioned screenshots do not constitute a Director playthrough. No M1 acceptance or M2 is implied.
+Director retest: assess shop quality, safe-base identity, approach/exit readability, Mara interaction and the complete expedition loop. Mara, inventory/trading UI, nearby secondary huts and most of the island remain placeholders. Counter and small props remain non-colliding decoration; only the rear/side structural walls block the player. The 8–12 minute first-play target remains unmeasured; positioned screenshots and automation are not a manual playthrough. No M1 acceptance or M2 is implied.
 
 ## Environment and workflow
 
 UE 5.8.2 CL56702186; VS Community 2026/MSVC 14.50; Windows SDK 10.0.26100.0; bundled .NET 10. Build/shader concurrency 2 on 16 GB RAM / GTX 1660 Ti Max-Q. Conservative DX11 renderer, conventional shadows, no Lumen/Nanite/raytracing. Use `Scripts/Build.ps1 -Mode Editor`, `Scripts/Test.ps1`, `Scripts/Build.ps1 -Mode Package`.
 
-EUR 0, no Fast mode. Current collaboration exposes explicit Sol/Terra/Luna/Astra routing but not Spark; its earlier successful availability/cap is historical. This bounded scene/tooling task used Sol, with lead integration/visual review. Generated review/profile/build artifacts remain ignored under Artifacts/Saved.
+EUR 0, no Fast mode. Current collaboration exposes explicit Sol/Terra/Luna/Astra routing but not Spark; its earlier successful availability/cap is historical. This focused hub task used Sol for Blender authoring and Terra for bounded integration, with lead integration/visual review. Generated review/profile/build artifacts remain ignored under Artifacts/Saved.

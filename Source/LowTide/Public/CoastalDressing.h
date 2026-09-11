@@ -30,7 +30,6 @@ private:
     void Add(UHierarchicalInstancedStaticMeshComponent* Component, const FVector& Location,
         const FVector& Scale, const FRotator& Rotation = FRotator::ZeroRotator);
     void AddHutFinish(const FVector& Location, float YawDegrees, float Scale);
-    void AddMarketCluster(const FVector& Location, float YawDegrees);
     void AddRouteEntrance(const FCoastalSceneLayout& Layout);
     void AddSignalStationHero(const FCoastalSceneLayout& Layout);
     void AddShrineHero(const FCoastalSceneLayout& Layout);

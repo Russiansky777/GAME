@@ -108,102 +108,14 @@ void ACoastalDressing::AddHutFinish(const FVector& Location, float YawDegrees, f
     }
 }
 
-void ACoastalDressing::AddMarketCluster(const FVector& Location, float YawDegrees)
-{
-    const FRotator Rotation(0.0f, YawDegrees, 0.0f);
-    const FVector Forward = Rotation.RotateVector(FVector::ForwardVector);
-    const FVector Side = Rotation.RotateVector(FVector::RightVector);
-    // Crates, barrel stacks and a low coiled-rope motif give Mara's canopy a useful visual rhythm.
-    Add(MarketInstances, Location + Forward * 340.0f + Side * 220.0f + FVector(0.0f, 0.0f, 8.0f),
-        FVector(0.78f, 0.78f, 0.58f), Rotation);
-    Add(MarketInstances, Location + Forward * 430.0f + Side * 225.0f + FVector(0.0f, 0.0f, 68.0f),
-        FVector(0.62f, 0.62f, 0.62f), Rotation);
-    Add(MarketInstances, Location - Forward * 300.0f + Side * 220.0f + FVector(0.0f, 0.0f, 20.0f),
-        FVector(0.58f, 0.58f, 0.70f), Rotation);
-    Add(CoralInstances, Location + Forward * 60.0f - Side * 315.0f + FVector(0.0f, 0.0f, 50.0f),
-        FVector(1.35f, 1.35f, 0.12f), FRotator(90.0f, YawDegrees, 0.0f));
-    for (int32 Index = 0; Index < 5; ++Index)
-    {
-        const float Angle = Index * UE_TWO_PI / 5.0f;
-        Add(TealInstances, Location + Forward * 55.0f - Side * 315.0f
-                + FVector(FMath::Cos(Angle) * 88.0f, FMath::Sin(Angle) * 88.0f, 48.0f),
-            FVector(0.13f, 0.13f, 0.13f));
-    }
-
-    // Ground-to-canopy uprights correct the original floating awning silhouette.
-    for (int32 ForwardSign : {-1, 1})
-    {
-        for (int32 SideSign : {-1, 1})
-        {
-            const FVector PostBase = Location + Forward * ForwardSign * 218.0f + Side * SideSign * 150.0f;
-            AddBeam(MarketInstances, PostBase - FVector(0.0f, 0.0f, 25.0f),
-                PostBase + FVector(0.0f, 0.0f, 285.0f), 17.0f);
-        }
-    }
-
-    // A striped canvas roof, counter fascia and backed sign turn the existing canopy into a trading stall.
-    const FRotator RoofRotation(5.0f, YawDegrees, 0.0f);
-    const FVector RoofCenter(Location.X, Location.Y, 432.0f);
-    for (int32 Stripe = -3; Stripe <= 3; ++Stripe)
-    {
-        Add((Stripe % 3) == 0 ? CoralInstances : ((Stripe % 2) == 0 ? CreamInstances : TealInstances),
-            RoofCenter + RoofRotation.RotateVector(FVector(Stripe * 75.0f, 0.0f, 0.0f)),
-            FVector(0.75f, 3.85f, 0.08f), RoofRotation);
-    }
-    const FVector StartFacing = (FVector(0.0f, 0.0f, Location.Z) - Location).GetSafeNormal2D();
-    const FVector CounterSide(-StartFacing.Y, StartFacing.X, 0.0f);
-    const FRotator CounterRotation = StartFacing.Rotation();
-    const FVector CounterCenter = Location + StartFacing * 178.0f + FVector(0.0f, 0.0f, 111.0f);
-    Add(CreamInstances, CounterCenter, FVector(0.14f, 4.15f, 0.66f), CounterRotation);
-    for (int32 Slat = -3; Slat <= 3; ++Slat)
-    {
-        Add(Slat % 2 == 0 ? CoralInstances : TealInstances,
-            CounterCenter + StartFacing * 9.0f + CounterSide * Slat * 56.0f,
-            FVector(0.08f, 0.42f, 0.48f), CounterRotation);
-    }
-
-    const FVector SignCenter = Location + Forward * 260.0f + Side * 282.0f + FVector(0.0f, 0.0f, 305.0f);
-    const FVector SignFacing = (FVector(0.0f, 0.0f, SignCenter.Z) - SignCenter).GetSafeNormal2D();
-    const FVector SignSide(-SignFacing.Y, SignFacing.X, 0.0f);
-    const FRotator SignRotation = SignFacing.Rotation();
-    Add(CreamInstances, SignCenter, FVector(0.18f, 2.55f, 1.35f), SignRotation);
-    Add(CoralInstances, SignCenter + SignFacing * 20.0f, FVector(0.07f, 0.82f, 0.16f),
-        FRotator(0.0f, SignRotation.Yaw, -18.0f));
-    Add(TealInstances, SignCenter + SignFacing * 21.0f + FVector(0.0f, 0.0f, 35.0f),
-        FVector(0.07f, 0.30f, 0.30f), SignRotation);
-    for (int32 SignPost : {-1, 1})
-    {
-        const FVector PostTop = SignCenter + SignSide * SignPost * 165.0f - FVector(0.0f, 0.0f, 62.0f);
-        AddBeam(MarketInstances, FVector(PostTop.X, PostTop.Y, 128.0f), PostTop, 12.0f);
-    }
-
-    const FVector PennantBase = Location + Forward * 500.0f + Side * 265.0f - FVector(0.0f, 0.0f, 25.0f);
-    AddBeam(MarketInstances, PennantBase, PennantBase + FVector(0.0f, 0.0f, 690.0f), 16.0f);
-    Add(CoralInstances, PennantBase + FVector(0.0f, 0.0f, 610.0f), FVector(0.12f, 1.15f, 0.42f),
-        FRotator(0.0f, YawDegrees + 8.0f, -10.0f));
-}
-
 void ACoastalDressing::AddRouteEntrance(const FCoastalSceneLayout& Layout)
 {
     if (Layout.RouteWaypoints.Num() < 3)
     {
         return;
     }
-    const FVector GateCenter(2760.0f, -2110.0f, 120.0f);
     const FVector Direction = (Layout.RouteWaypoints[2] - Layout.RouteWaypoints[1]).GetSafeNormal2D();
     const FVector Side(-Direction.Y, Direction.X, 0.0f);
-    const FVector LeftBase = GateCenter + Side * 650.0f;
-    const FVector RightBase = GateCenter - Side * 650.0f;
-    AddBeam(MarketInstances, LeftBase, LeftBase + FVector(0.0f, 0.0f, 520.0f), 20.0f);
-    AddBeam(MarketInstances, RightBase, RightBase + FVector(0.0f, 0.0f, 520.0f), 20.0f);
-    AddBeam(MarketInstances, LeftBase + FVector(0.0f, 0.0f, 500.0f),
-        RightBase + FVector(0.0f, 0.0f, 500.0f), 17.0f);
-    for (int32 SideSign : {-1, 1})
-    {
-        const FVector Banner = GateCenter + Side * SideSign * 625.0f + Direction * 35.0f + FVector(0.0f, 0.0f, 395.0f);
-        Add(SideSign < 0 ? TealInstances : CoralInstances, Banner, FVector(0.08f, 0.62f, 0.76f),
-            FRotator(0.0f, Direction.Rotation().Yaw, SideSign * 7.0f));
-    }
     // Repeated compact markers establish a deliberate low-tide road without occupying the walk lane.
     for (int32 Marker = 0; Marker < 4; ++Marker)
     {
@@ -340,7 +252,6 @@ void ACoastalDressing::BuildDressing(const FCoastalSceneLayout& Layout)
     AddHutFinish(FVector(-1100.0f, -1650.0f, 150.0f), 18.0f, 1.0f);
     AddHutFinish(FVector(1250.0f, -2100.0f, 145.0f), -20.0f, 0.82f);
     AddHutFinish(FVector(-1550.0f, 900.0f, 155.0f), 125.0f, 0.75f);
-    AddMarketCluster(FVector(900.0f, -700.0f, 150.0f), 10.0f);
     AddRouteEntrance(Layout);
     AddSignalStationHero(Layout);
     AddShrineHero(Layout);

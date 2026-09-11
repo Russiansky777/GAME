@@ -175,7 +175,7 @@ void ACoastalScene::BuildScene()
 
     FActorSpawnParameters SpawnParameters;
     SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-    Layout.Mara = GetWorld()->SpawnActor<ATraderActor>(FVector(900.0f, -700.0f, 215.0f),
+    Layout.Mara = GetWorld()->SpawnActor<ATraderActor>(FVector(900.0f, -1350.0f, 215.0f),
         FRotator(0.0f, 145.0f, 0.0f), SpawnParameters);
     if (Layout.Mara)
     {
@@ -211,6 +211,7 @@ void ACoastalScene::BuildScene()
             FRotator::ZeroRotator, FLinearColor(0.10f, 0.19f, 0.22f), TEXT("MaraSouWester"));
         AddMaraPart(CubeMesh, MaraLocation + FVector(0.0f, 0.0f, 22.0f), FVector(0.62f, 0.58f, 0.82f),
             FRotator(0.0f, 145.0f, 0.0f), FLinearColor(0.82f, 0.33f, 0.12f), TEXT("MaraApron"));
+        BuildTraderHub();
     }
 
     Layout.RareArtifactVisual = CreateRareArtifactVisual(Layout.RareArtifactLocation);
@@ -589,25 +590,99 @@ void ACoastalScene::BuildSettlement()
     BuildFishingHut(FVector(-1550.0f, 900.0f, 155.0f), 125.0f, 0.75f);
     BuildBoat(FVector(1450.0f, 1250.0f, 130.0f), -28.0f, 0.9f);
 
-    // Mara's market canopy and fish-drying frame create a warm recognizable return target.
-    AddInstance(WoodDetailInstances, FVector(900.0f, -700.0f, 260.0f), FVector(4.8f, 3.5f, 0.18f), FRotator(0.0f, 10.0f, 0.0f));
-    for (int32 SideX = -1; SideX <= 1; SideX += 2)
-    {
-        for (int32 SideY = -1; SideY <= 1; SideY += 2)
-        {
-            AddInstance(RopeInstances, FVector(900.0f + SideX * 210.0f, -700.0f + SideY * 145.0f, 180.0f),
-                FVector(0.13f, 0.13f, 2.6f));
-        }
-    }
-    AddInstance(RoofInstances, FVector(900.0f, -700.0f, 420.0f), FVector(5.2f, 3.9f, 0.16f), FRotator(5.0f, 10.0f, 0.0f));
-    AddInstance(WarmAccentInstances, FVector(900.0f, -700.0f, 385.0f), FVector(0.38f, 0.38f, 0.38f));
-    AddWorldLabel(TEXT("MARA // SUPPLIES & SALVAGE"), FVector(900.0f, -940.0f, 500.0f), FRotator(0.0f, 90.0f, 0.0f),
-        FLinearColor(1.0f, 0.65f, 0.22f), 36.0f);
-
     BuildRopeFence(FVector(-400.0f, 2600.0f, 110.0f), FVector(2500.0f, 2100.0f, 120.0f), 6);
     BuildRopeFence(FVector(-2600.0f, -2900.0f, 110.0f), FVector(-500.0f, -3200.0f, 105.0f), 5);
-    AddWorldLabel(TEXT("LOW-TIDE COVE"), FVector(1700.0f, -1250.0f, 410.0f),
-        FRotator(0.0f, 145.0f, 0.0f), FLinearColor(0.76f, 0.91f, 0.88f), 48.0f);
+}
+
+void ACoastalScene::BuildTraderHub()
+{
+    if (!Layout.Mara)
+    {
+        return;
+    }
+
+    // The authored kit shares a local origin. Its front is -X and its rear points +X,
+    // so it is deliberately anchored independently of Mara's placeholder rotation.
+    struct FTraderHubMesh
+    {
+        const TCHAR* Name;
+        const TCHAR* AssetPath;
+    };
+    const FTraderHubMesh HubMeshes[] = {
+        { TEXT("Structure"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Structure.SM_LT_TraderHub_Structure") },
+        { TEXT("Awning"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Awning.SM_LT_TraderHub_Awning") },
+        { TEXT("Counter"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Counter.SM_LT_TraderHub_Counter") },
+        { TEXT("Storage"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Storage.SM_LT_TraderHub_Storage") },
+        { TEXT("Nautical"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Nautical.SM_LT_TraderHub_Nautical") },
+        { TEXT("Workbench"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Workbench.SM_LT_TraderHub_Workbench") },
+        { TEXT("Sign"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Sign.SM_LT_TraderHub_Sign") },
+    };
+
+    TArray<UStaticMesh*> LoadedMeshes;
+    LoadedMeshes.Reserve(UE_ARRAY_COUNT(HubMeshes));
+    for (const FTraderHubMesh& HubMesh : HubMeshes)
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, HubMesh.AssetPath);
+        if (!Mesh)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("LOW TIDE trader hub kit unavailable: %s. Mara remains playable without hub visuals."),
+                HubMesh.AssetPath);
+            return;
+        }
+        LoadedMeshes.Add(Mesh);
+    }
+
+    USceneComponent* HubRoot = NewObject<USceneComponent>(this, TEXT("TraderHubRoot"));
+    AddInstanceComponent(HubRoot);
+    HubRoot->SetupAttachment(SceneRoot);
+    HubRoot->SetAbsolute(true, true, true);
+    HubRoot->SetWorldLocation(FVector(900.0f, -1350.0f, 125.0f));
+    HubRoot->SetWorldRotation(FRotator(0.0f, -38.0f, 0.0f));
+    HubRoot->SetWorldScale3D(FVector::OneVector);
+    HubRoot->RegisterComponent();
+
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(HubMeshes); ++Index)
+    {
+        UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this,
+            *FString::Printf(TEXT("TraderHub_%s"), HubMeshes[Index].Name));
+        AddInstanceComponent(Part);
+        Part->SetupAttachment(HubRoot);
+        Part->SetStaticMesh(LoadedMeshes[Index]);
+        Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Part->SetCastShadow(true);
+        Part->ComponentTags.Add(TEXT("TraderHubMesh"));
+        Part->SetRelativeTransform(FTransform::Identity);
+        Part->RegisterComponent();
+    }
+
+    // These are the only hub collision additions: back and side shells. The authored front remains open
+    // so Mara's existing interaction ray, floor and route approach retain their validated behavior.
+    struct FTraderHubProxy
+    {
+        FVector Center;
+        FVector Extent;
+        const TCHAR* Name;
+    };
+    const FTraderHubProxy Proxies[] = {
+        { FVector(442.0f, 0.0f, 260.0f), FVector(22.0f, 306.0f, 225.0f), TEXT("BackWall") },
+        { FVector(225.0f, -312.0f, 190.0f), FVector(178.0f, 18.0f, 170.0f), TEXT("LeftWall") },
+        { FVector(225.0f, 312.0f, 190.0f), FVector(178.0f, 18.0f, 170.0f), TEXT("RightWall") },
+    };
+    for (const FTraderHubProxy& Proxy : Proxies)
+    {
+        UBoxComponent* Box = NewObject<UBoxComponent>(this, FName(Proxy.Name));
+        AddInstanceComponent(Box);
+        Box->SetupAttachment(HubRoot);
+        Box->SetRelativeLocation(Proxy.Center);
+        Box->SetBoxExtent(Proxy.Extent);
+        Box->SetCollisionProfileName(TEXT("BlockAll"));
+        Box->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        Box->ComponentTags.Add(TEXT("TraderHubCollision"));
+        Box->RegisterComponent();
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("LOW TIDE trader hub kit loaded: %d authored meshes, 3 structural collision proxies."),
+        UE_ARRAY_COUNT(HubMeshes));
 }
 
 void ACoastalScene::BuildMainRoute()

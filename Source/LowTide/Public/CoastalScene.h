@@ -127,6 +127,7 @@ private:
     AActor* SpawnShortcutBlocker();
     void BuildLighting();
     void BuildSettlement();
+    void BuildTraderHub();
     void BuildMainRoute();
     void BuildAlternateRoute();
     void BuildOptionalRoute();
