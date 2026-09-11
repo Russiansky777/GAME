@@ -13,10 +13,13 @@ $report.tests | Select-Object fullTestPath, state | Format-Table -AutoSize
 $requiredTests = @(
     'LowTide.M05.Expedition.RoundTrip',
     'LowTide.M05.Expedition.SafeEdgeReturn',
+    'LowTide.M05.Traversal.ControlsAndGrounding',
     'LowTide.M05.Inventory.AtomicIndividualSale',
     'LowTide.M05.Inventory.CapacityAndQuantityBoundaries',
     'LowTide.M1.Mission.UniqueRewardAndRareChoice',
     'LowTide.M1.Expedition.LivingTideAndAlternateRoute',
+    'LowTide.M1.Risk.InvalidGroundRecovery',
+    'LowTide.M1.Traversal.JumpContainment',
     'LowTide.M1.Risk.PhenomenonRecoveryAndSecondTrip',
     'LowTide.M1.Scene.Containment'
 )

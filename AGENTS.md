@@ -8,6 +8,8 @@ Read Docs/CURRENT_STATE.md first, then PROJECT_BRIEF, GAME_DESIGN, ARCHITECTURE,
 
 This is the authoritative repository. Inspect status, preserve unrelated work and commit verified milestones. Extend the existing Unreal 5.8.2 C++/Win64 project; verified toolchain is recorded in Docs/CURRENT_STATE.md. Prefer text-readable code/config/data, stable item IDs and explicit inventory/trading transactions. Use LFS for Unreal assets and ignore generated output.
 
+Prefer filesystem, terminal, Git, scripts, APIs and command-line Unreal tools whenever sufficient. Use interactive computer control for necessary visual inspection, reliable GUI-only Editor/Blender work, authentication and OS dialogs. Batch related GUI work and release idle interactive control when practical; never interrupt builds, operations, visual validation or authentication, or sacrifice reliability merely to release it. This is a soft efficiency preference.
+
 Reduce content before architectural quality. No speculative frameworks, combat, backend, advanced ocean, elaborate crafting or extra NPCs for M0.5. Use primitive/engine assets; record provenance for external assets.
 
 M0.5 is Director-accepted. Active M1 scope is one authored 8–12 minute stylized expedition: comfortable story objective, optional valuable risk branch, one non-combat phenomenon and tide-driven shortcut closure with alternate escape. Carry warning-readability improvements into M1. Provisional story/tuning may be authored reversibly; do not lock major lore or broaden systems. Concentrate reusable custom/stylized art and minimal audio on this slice; no further M0.5 polish.

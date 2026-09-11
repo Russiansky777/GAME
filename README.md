@@ -2,8 +2,8 @@
 
 Offline first-person coastal exploration game. M0.5 is an accepted historical
 greybox. M1 is the current authored stylized expedition candidate. Its fresh
-Win64 package, stationary performance capture and eight-test automation suite
-pass; manual timing/audio/art review and Director acceptance are pending.
+Win64 traversal-correction package and 11 passing regressions are recorded in
+Docs/CURRENT_STATE.md. Continued Director evaluation is the next step.
 
 ## Development
 
@@ -25,9 +25,12 @@ M1 slice on the engine Entry map.
 
 ## M1 play
 
-WASD moves, mouse looks, E interacts or closes trade, I opens/closes the
-inventory, 1–8 sell a matching inventory slot at Mara, Esc quits, and Left Shift
-sprints. Sessions do not save yet.
+WASD moves, mouse looks, Space jumps, E interacts or closes trade, I opens/closes
+the inventory, 1–8 sell a matching inventory slot at Mara, Esc quits, and Left
+Shift sprints. Sessions do not save yet. Movement is tuned to 650 cm/s walking
+and 1040 cm/s sprinting; jumping uses a single 420 cm/s launch with restrained
+air control. Small terrain changes should be handled by automatic step-up, not
+used as a reason to jump around broken geometry.
 
 Speak to Mara to accept the expedition and start the tide. Follow the amber
 low-tide route to the signal logbook, then return to Mara. The shrine branch is

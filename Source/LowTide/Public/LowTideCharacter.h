@@ -65,6 +65,7 @@ private:
     bool bInventoryOpen = false;
     bool bSprinting = false;
 
-    static constexpr float WalkSpeed = 500.0f;
+    // Tuned for a responsive, readable expedition pace; sprint preserves the established 60% advantage.
+    static constexpr float WalkSpeed = 650.0f;
     static constexpr float SprintSpeed = WalkSpeed * 1.6f;
 };

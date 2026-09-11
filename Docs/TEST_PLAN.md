@@ -2,14 +2,25 @@
 
 ## M1 automated evidence
 
-The latest run recorded in CURRENT_STATE reports 8/8 successes and 0 failures: four retained M0.5 regressions and four M1 tests. Re-run the suite against the fresh candidate after any source or asset change:
+Current run results, package evidence and any remaining failures are recorded in CURRENT_STATE. The regression set is grouped as five retained M0.5 checks and six M1 checks; rerun it against the fresh candidate after any source or asset change:
 
-1. Mission reward and rare-choice transaction: Mara begins the expedition, logbook return resolves once, and the optional artifact can be retained or sold.
-2. Living tide and alternate route: normal `CharacterMovement` walks every main-route, optional-risk and elevated blue-escape segment with gravity, slopes and collision; rising water closes the shortcut while the escape remains walkable. It also checks the wet-ground warning/grace: under five continuous seconds does not recover, while five seconds removes only newly acquired ordinary salvage and keeps prior ordinary stock, protected evidence and credits.
-3. Phenomenon recovery and second trip: marked grounding counterplay/recovery resolves the risk and a later low tide provides collectible ordinary salvage again.
-4. Scene containment and clearance: route floor, boundaries, shortcut closure and interaction-line clearance are checked independently of decorative meshes.
+1. M0.5 regressions (five): expedition round trip, safe-edge recovery, sprint/containment, individual-sale atomicity, and inventory capacity/quantity boundaries.
+2. M1 mission transaction: Mara begins the expedition, logbook return resolves once, and the optional artifact can be retained or sold.
+3. M1 living tide and alternate route: `CharacterMovement` walks every main-route, optional-risk and elevated blue-escape segment with gravity, slopes and collision; rising water closes the shortcut while the escape remains walkable, including wet-ground warning/grace and salvage retention.
+4. M1 phenomenon recovery and second trip: grounding counterplay/recovery resolves the risk and a later low tide provides collectible ordinary salvage again.
+5. M1 scene containment and clearance: route floor, boundaries, shortcut closure and interaction-line clearance are checked independently of decorative meshes.
+6. M1 traversal safety: single jump, automatic step-up, invalid freefall recovery and inventory/mission/expedition snapshot retention are checked without allowing tide-blocker bypass.
+7. M1 terrain continuity: imported bounds, route-array guard, visual ribbon alignment and direct/union ray checks cover the intended route surfaces; this does not replace manual visual-quality review.
 
-The first four named M0.5 regressions remain: expedition round trip, safe-edge recovery, individual-sale atomicity, and inventory capacity/quantity boundaries. Passing automation does not establish keyboard/mouse usability, audible playback, visual quality, accessibility, player timing or performance.
+The consolidated traversal acceptance checks are:
+
+1. Measure actual walk and sprint speeds, then traverse the complete main, optional-risk and elevated-return routes at both speeds without timing assumptions that hide a collision break.
+2. Exercise Space near small rocks, curbs, route seams, tide blockers and important boundaries; confirm a stable single jump and that jumping is not required to cross missing or broken geometry.
+3. Force an invalid freefall below -1000 cm; confirm recovery to the last supported dry spot, or expedition start when submerged, with inventory, mission and expedition snapshot retained and no new penalty.
+4. Verify tide jump recovery: the rising tide closes the low shortcut, jumping cannot bypass the closure, and the elevated escape remains physically traversable.
+5. Inspect visual terrain/collision continuity along every intended route and every M0.5-to-M1 transition; record any remaining visible gap, drop-off or invisible-space walk before calling the pass complete.
+
+Passing automation does not establish keyboard/mouse usability, audible playback, visual quality, accessibility, player timing or performance. Technical route-image review is recorded in CURRENT_STATE; Director visual-quality review and acceptance remain pending.
 
 ## M1 delivery and Director acceptance checks
 

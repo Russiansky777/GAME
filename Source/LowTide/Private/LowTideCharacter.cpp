@@ -14,7 +14,12 @@ ALowTideCharacter::ALowTideCharacter()
     PrimaryActorTick.bCanEverTick = true;
     GetCapsuleComponent()->InitCapsuleSize(42.0f, 92.0f);
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-    GetCharacterMovement()->JumpZVelocity = 0.0f;
+    GetCharacterMovement()->JumpZVelocity = 420.0f;
+    GetCharacterMovement()->GravityScale = 1.3f;
+    GetCharacterMovement()->AirControl = 0.2f;
+    GetCharacterMovement()->MaxStepHeight = 45.0f;
+    GetCharacterMovement()->SetWalkableFloorAngle(45.0f);
+    JumpMaxCount = 1;
 
     FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
     FirstPersonCamera->SetupAttachment(GetCapsuleComponent());
@@ -45,6 +50,8 @@ void ALowTideCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
     PlayerInputComponent->BindAction(TEXT("Inventory"), IE_Pressed, this, &ALowTideCharacter::ToggleInventory);
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Pressed, this, &ALowTideCharacter::StartSprint);
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Released, this, &ALowTideCharacter::StopSprint);
+    PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ACharacter::Jump);
+    PlayerInputComponent->BindAction(TEXT("Jump"), IE_Released, this, &ACharacter::StopJumping);
     PlayerInputComponent->BindAction(TEXT("Quit"), IE_Pressed, this, &ALowTideCharacter::QuitGame);
     PlayerInputComponent->BindAction(TEXT("Sell1"), IE_Pressed, this, &ALowTideCharacter::SellSlot1);
     PlayerInputComponent->BindAction(TEXT("Sell2"), IE_Pressed, this, &ALowTideCharacter::SellSlot2);
@@ -182,7 +189,12 @@ void ALowTideCharacter::CloseMenus()
 void ALowTideCharacter::ResetMovementAfterRecovery()
 {
     StopSprint();
+    StopJumping();
     GetCharacterMovement()->StopMovementImmediately();
+    if (GetCharacterMovement()->IsFalling())
+    {
+        GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    }
 }
 
 void ALowTideCharacter::SellSlot(int32 Slot)

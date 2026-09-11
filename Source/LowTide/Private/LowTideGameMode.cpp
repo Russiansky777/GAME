@@ -129,12 +129,26 @@ void ALowTideGameMode::Tick(float DeltaSeconds)
         }
     }
 
+    // Geometry failures are separate from the authored tide/watcher risk rules.
+    // The threshold is below even the submerged terrain skirts, not a normal low-route elevation.
+    if (!bM05Fixture && Character->GetActorLocation().Z < -180.0f)
+    {
+        if (Character->GetActorLocation().Z < -1000.0f)
+        {
+            RecoverInvalidFall(Character);
+        }
+        // While falling below every valid M1 walking surface, neither wet-depth nor a
+        // watcher's 2D proximity may turn the geometry bug into a salvage penalty.
+        return;
+    }
+
     if (!bM05Fixture)
     {
+        RememberSafeRecoveryPoint(Character);
         UpdatePhenomenon(Character, DeltaSeconds);
     }
 
-    if (Character->GetActorLocation().Z < -180.0f)
+    if (bM05Fixture && Character->GetActorLocation().Z < -180.0f)
     {
         RecoverStrandedPlayer();
     }
@@ -152,8 +166,21 @@ void ALowTideGameMode::Tick(float DeltaSeconds)
     else if (!bM05Fixture)
     {
         const bool bSafe = IsInSafeSettlement(Character->GetActorLocation());
-        const float FeetZ = Character->GetActorLocation().Z - Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-        const bool bWetLowerGround = TideController && !bSafe
+        float FeetZ = Character->GetActorLocation().Z - Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        bool bSupportedGround = true;
+        if (Character->GetCharacterMovement()->IsFalling())
+        {
+            // A short jump over flooded ground must not restart the five-second escape grace.
+            FHitResult Ground;
+            FCollisionQueryParams Query(SCENE_QUERY_STAT(M1JumpWaterDepth), false, Character);
+            bSupportedGround = GetWorld()->LineTraceSingleByChannel(Ground, Character->GetActorLocation(),
+                Character->GetActorLocation() - FVector(0.0f, 0.0f, 300.0f), ECC_Pawn, Query);
+            if (bSupportedGround)
+            {
+                FeetZ = Ground.ImpactPoint.Z;
+            }
+        }
+        const bool bWetLowerGround = TideController && !bSafe && bSupportedGround
             && TideController->GetWaterSurfaceZ() - FeetZ > 45.0f;
         if (bWetLowerGround)
         {
@@ -893,7 +920,8 @@ void ALowTideGameMode::UpdatePhenomenon(ALowTideCharacter* Character, float Delt
     else if (Character->GetVelocity().SizeSquared2D() > FMath::Square(25.0f))
     {
         const FVector AdvanceDirection = (Character->GetActorLocation() - PhenomenonLocation).GetSafeNormal();
-        PhenomenonLocation += AdvanceDirection * 650.0f * DeltaSeconds;
+        // Preserve the original 1.3x walking pursuit ratio after the Director's +30% movement tune.
+        PhenomenonLocation += AdvanceDirection * 845.0f * DeltaSeconds;
         Phenomenon->SetActorLocation(PhenomenonLocation);
     }
 
@@ -1070,6 +1098,58 @@ void ALowTideGameMode::HandleAccessChanged(bool bOpen)
     }
 }
 
+bool ALowTideGameMode::IsSafeRecoveryPoint(const ALowTideCharacter* Character, const FVector& Location) const
+{
+    const UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+    const float HalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    // Probe a small margin around the capsule, so the saved spot is not a precarious lip.
+    const FVector Offsets[] = { FVector::ZeroVector, FVector(75, 0, 0), FVector(-75, 0, 0),
+        FVector(0, 75, 0), FVector(0, -75, 0) };
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(M1SafeRecoverySupport), false, Character);
+    for (const FVector& Offset : Offsets)
+    {
+        FHitResult Ground;
+        if (!GetWorld()->LineTraceSingleByChannel(Ground, Location + Offset + FVector(0, 0, 10),
+            Location + Offset - FVector(0, 0, HalfHeight + Movement->MaxStepHeight + 10), ECC_Pawn, Query)
+            || Ground.ImpactNormal.Z < Movement->GetWalkableFloorZ()
+            || FMath::Abs(Ground.ImpactPoint.Z - (Location.Z - HalfHeight)) > Movement->MaxStepHeight
+            || (TideController && !IsInSafeSettlement(Location)
+                && Ground.ImpactPoint.Z < TideController->GetWaterSurfaceZ()))
+        {
+            return false;
+        }
+    }
+    return !GetWorld()->OverlapBlockingTestByChannel(Location, FQuat::Identity, ECC_Pawn,
+        FCollisionShape::MakeCapsule(Character->GetCapsuleComponent()->GetScaledCapsuleRadius() - 1.0f,
+            HalfHeight - 1.0f), Query);
+}
+
+void ALowTideGameMode::RememberSafeRecoveryPoint(ALowTideCharacter* Character)
+{
+    const FVector Location = Character->GetActorLocation();
+    if (Character->GetCharacterMovement()->IsMovingOnGround()
+        && (!bHasSafeRecoveryLocation || FVector::DistSquared(Location, LastSafeRecoveryLocation) > FMath::Square(250.0f))
+        && IsSafeRecoveryPoint(Character, Location))
+    {
+        LastSafeRecoveryLocation = Location;
+        bHasSafeRecoveryLocation = true;
+    }
+}
+
+void ALowTideGameMode::RecoverInvalidFall(ALowTideCharacter* Character)
+{
+    const FVector Destination = bHasSafeRecoveryLocation && IsSafeRecoveryPoint(Character, LastSafeRecoveryLocation)
+        ? LastSafeRecoveryLocation : SafePlayerLocation;
+    Character->CloseMenus();
+    Character->ResetMovementAfterRecovery();
+    Character->SetActorLocation(Destination, false, nullptr, ETeleportType::TeleportPhysics);
+    WetExposureSeconds = 0.0f;
+    bWetGroundWarningShown = false;
+    // Keep inventory, mission, pursuit and the expedition snapshot intact: this is not a failed expedition.
+    Character->ShowFeedback(TEXT("Recovered from invalid ground; all items kept."), 6.0f);
+    UE_LOG(LogTemp, Log, TEXT("LOW TIDE invalid-ground recovery to %s (no item penalty)"), *Destination.ToString());
+}
+
 void ALowTideGameMode::RecoverStrandedPlayer(const FString& Trigger)
 {
     APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
@@ -1100,6 +1180,8 @@ void ALowTideGameMode::RecoverStrandedPlayer(const FString& Trigger)
     Character->CloseMenus();
     Character->ResetMovementAfterRecovery();
     Character->SetActorLocation(SafePlayerLocation, false, nullptr, ETeleportType::TeleportPhysics);
+    WetExposureSeconds = 0.0f;
+    bWetGroundWarningShown = false;
     SetPhenomenonActive(false);
     CompleteExpedition();
     Character->ShowFeedback(FString::Printf(TEXT("%s. Recovered to shore: lost %d expedition salvage; prior stock, evidence and credits kept."), *Trigger, LostCount), 9.0f);

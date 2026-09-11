@@ -71,6 +71,9 @@ private:
     void HandleTidePhaseChanged(ETidePhase NewPhase);
     void HandleAccessChanged(bool bOpen);
     void RecoverStrandedPlayer(const FString& Trigger = TEXT("Access submerged"));
+    bool IsSafeRecoveryPoint(const ALowTideCharacter* Character, const FVector& Location) const;
+    void RememberSafeRecoveryPoint(ALowTideCharacter* Character);
+    void RecoverInvalidFall(ALowTideCharacter* Character);
     void CompleteExpedition();
     void SpawnInvisibleBoundary(const FVector& Location, const FVector& Scale);
     EM1ReviewView ParseReviewViewName(const FString& ReviewName) const;
@@ -119,6 +122,8 @@ private:
 
     int32 SpawnedLowCycle = INDEX_NONE;
     FVector SafePlayerLocation = FVector(-300.0f, 0.0f, 190.0f);
+    FVector LastSafeRecoveryLocation = FVector::ZeroVector;
+    bool bHasSafeRecoveryLocation = false;
     TMap<FName, int32> ExpeditionStartQuantities;
     bool bExpeditionActive = false;
     bool bM05Fixture = false;

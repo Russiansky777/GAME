@@ -92,7 +92,7 @@ void ALowTideHUD::DrawHUD()
     const ULowTideInventoryComponent* Inventory = Character->GetInventory();
     DrawText(FString::Printf(TEXT("PACK %d/%d     CREDITS %d"), Inventory->GetUsedCapacity(), Inventory->GetCapacity(), Inventory->GetCredits()),
         FLinearColor::White, 32.0f, Canvas->SizeY - 54.0f, GEngine->GetSmallFont(), 1.05f, false);
-    DrawText(TEXT("WASD move  |  Hold Left Shift sprint  |  E interact  |  I inventory  |  Esc quit"),
+    DrawText(TEXT("WASD move  |  Shift sprint  |  Space jump  |  E interact  |  I inventory  |  Esc quit"),
         FLinearColor(0.72f, 0.78f, 0.80f), 32.0f, Canvas->SizeY - 30.0f, GEngine->GetSmallFont(), 0.9f, false);
 
     if (Character->IsInventoryOpen() || Character->GetActiveTrader())

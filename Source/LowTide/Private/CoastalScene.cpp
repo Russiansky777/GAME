@@ -23,6 +23,8 @@
 namespace CoastalScene
 {
     constexpr float CubeSize = 100.0f;
+    // Keep the floor slightly beneath the route boundaries so their inner faces never expose invisible footing.
+    constexpr float RouteFloorWidthScale = 1.16f;
 
     FRotator FacingRotation(const FVector& From, const FVector& Toward)
     {
@@ -611,6 +613,12 @@ void ACoastalScene::BuildSettlement()
 void ACoastalScene::BuildMainRoute()
 {
     BuildPathRibbon(Layout.RouteWaypoints, SandInstances, 900.0f, true, true, false);
+    // Carry the 125 cm settlement floor beyond its furthest edge across the full trail width,
+    // then descend on one shallow proxy to meet the authored main-route plane in both directions.
+    AddBoxBetween(RouteFloorCollision, FVector(2000.0f, -800.0f, 128.0f),
+        FVector(3430.0f, -3400.0f, 128.0f), 900.0f * CoastalScene::RouteFloorWidthScale, 70.0f, -38.0f);
+    AddBoxBetween(RouteFloorCollision, FVector(3430.0f, -3400.0f, 128.0f),
+        FVector(4002.0f, -4440.0f, 35.4f), 900.0f * CoastalScene::RouteFloorWidthScale, 70.0f, -38.0f);
     for (int32 Index = 1; Index < Layout.RouteWaypoints.Num(); ++Index)
     {
         if (Index == 8)
@@ -703,10 +711,11 @@ void ACoastalScene::BuildPathRibbon(const TArray<FVector>& Points,
     {
         const FVector Start = Points[Index];
         const FVector End = Points[Index + 1];
-        // The authored terrain supplies the visible surface. These transforms remain the tested collision floor.
-        AddBoxBetween(RouteFloorCollision, Start, End, Width, 70.0f, -38.0f);
+        // Generated route ribbons mirror these pitched top planes and horizontal junction caps.
+        const float CollisionWidth = Width * CoastalScene::RouteFloorWidthScale;
+        AddBoxBetween(RouteFloorCollision, Start, End, CollisionWidth, 70.0f, -38.0f);
         AddInstance(RouteFloorCollision, Start + FVector(0.0f, 0.0f, -38.0f),
-            FVector(Width / 100.0f, Width / 100.0f, 0.7f));
+            FVector(CollisionWidth / 100.0f, CollisionWidth / 100.0f, 0.7f));
 
         FVector FlatDirection(End.X - Start.X, End.Y - Start.Y, 0.0f);
         FlatDirection.Normalize();

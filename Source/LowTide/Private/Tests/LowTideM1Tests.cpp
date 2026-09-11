@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Components/CapsuleComponent.h"
+#include "Components/InputComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
@@ -17,6 +18,7 @@
 #include "PickupActor.h"
 #include "TideController.h"
 #include "TraderActor.h"
+#include "InputCoreTypes.h"
 
 namespace
 {
@@ -118,6 +120,24 @@ bool Collect(ALowTideCharacter* Character, APickupActor* Pickup)
     }
     Character->SetActorLocation(Pickup->GetActorLocation());
     return Pickup->Interact(Character);
+}
+
+bool ExecuteActionBinding(UInputComponent* InputComponent, FName ActionName, EInputEvent Event, const FKey& Key)
+{
+    if (!InputComponent)
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < InputComponent->GetNumActionBindings(); ++Index)
+    {
+        FInputActionBinding& Binding = InputComponent->GetActionBinding(Index);
+        if (Binding.GetActionName() == ActionName && Binding.KeyEvent == Event)
+        {
+            Binding.ActionDelegate.Execute(Key);
+            return true;
+        }
+    }
+    return false;
 }
 }
 
@@ -237,7 +257,6 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
             return false;
         }
         UCharacterMovementComponent* Movement = TestWorld.Character->GetCharacterMovement();
-        Movement->GravityScale = 1.0f;
         Movement->SetMovementMode(MOVE_Walking);
         Movement->StopMovementImmediately();
         TestWorld.Character->SetActorLocation(GroundHit.ImpactPoint
@@ -249,8 +268,13 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
         return true;
     };
 
-    const auto WalkWaypoints = [this, &TestWorld, Tide](const FString& RouteName, const TArray<FVector>& Points, bool bReverse)
+    const auto WalkWaypoints = [this, &TestWorld, Tide](const FString& RouteName, const TArray<FVector>& Points, bool bReverse, bool bSprint)
     {
+        if (bSprint && !ExecuteActionBinding(TestWorld.Character->InputComponent, TEXT("Sprint"), IE_Pressed, EKeys::LeftShift))
+        {
+            AddError(RouteName + TEXT(" has no sprint pressed binding"));
+            return false;
+        }
         const int32 Start = bReverse ? Points.Num() - 2 : 1;
         const int32 End = bReverse ? -1 : Points.Num();
         const int32 Step = bReverse ? -1 : 1;
@@ -281,6 +305,10 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
                         FloorHit.GetActor() ? *FloorHit.GetActor()->GetName() : TEXT("none"),
                         FloorHit.GetComponent() ? *FloorHit.GetComponent()->GetName() : TEXT("none"),
                         *Tide->GetPhaseName(), Tide->GetWaterSurfaceZ()));
+                    if (bSprint)
+                    {
+                        ExecuteActionBinding(TestWorld.Character->InputComponent, TEXT("Sprint"), IE_Released, EKeys::LeftShift);
+                    }
                     return false;
                 }
             }
@@ -290,19 +318,38 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
                     *RouteName, Index, Frames * 0.05f, *Target.ToString(), *TestWorld.Character->GetActorLocation().ToString(),
                     static_cast<int32>(TestWorld.Character->GetCharacterMovement()->MovementMode),
                     *Tide->GetPhaseName(), Tide->GetWaterSurfaceZ()));
+                if (bSprint)
+                {
+                    ExecuteActionBinding(TestWorld.Character->InputComponent, TEXT("Sprint"), IE_Released, EKeys::LeftShift);
+                }
                 return false;
             }
+        }
+        if (bSprint)
+        {
+            ExecuteActionBinding(TestWorld.Character->InputComponent, TEXT("Sprint"), IE_Released, EKeys::LeftShift);
         }
         return true;
     };
 
     // Exercise normal CharacterMovement walking, acceleration, gravity, slopes and collision along all routes.
     TestTrue(TEXT("Main route starts on walkable ground"), PlaceOnWalkableGround(TEXT("main route start"), Layout.RouteWaypoints[0]));
-    TestTrue(TEXT("CharacterMovement traverses every winding main-route segment"), WalkWaypoints(TEXT("main route"), Layout.RouteWaypoints, false));
+    TestTrue(TEXT("Walking CharacterMovement traverses every winding main-route segment without jumping"), WalkWaypoints(TEXT("main route walking"), Layout.RouteWaypoints, false, false));
+    TestTrue(TEXT("Sprint main route starts on walkable ground"), PlaceOnWalkableGround(TEXT("sprint main route start"), Layout.RouteWaypoints[0]));
+    TestTrue(TEXT("Sprinting CharacterMovement traverses every main-route segment without jumping"), WalkWaypoints(TEXT("main route sprint"), Layout.RouteWaypoints, false, true));
+    const TArray<FVector> EntranceRoute = { Layout.RouteWaypoints[0], Layout.RouteWaypoints[1], Layout.RouteWaypoints[2] };
+    TestTrue(TEXT("Entrance return landing starts on walkable ground"), PlaceOnWalkableGround(TEXT("entrance return walking start"), EntranceRoute.Last()));
+    TestTrue(TEXT("Walking returns from the new entrance terrain to the original settlement floor without jumping"), WalkWaypoints(TEXT("entrance return walking"), EntranceRoute, true, false));
+    TestTrue(TEXT("Sprint entrance return landing starts on walkable ground"), PlaceOnWalkableGround(TEXT("entrance return sprint start"), EntranceRoute.Last()));
+    TestTrue(TEXT("Sprinting returns from the new entrance terrain to the original settlement floor without jumping"), WalkWaypoints(TEXT("entrance return sprint"), EntranceRoute, true, true));
     TestTrue(TEXT("Optional route starts on walkable ground"), PlaceOnWalkableGround(TEXT("optional route start"), Layout.OptionalRouteWaypoints[0]));
-    TestTrue(TEXT("CharacterMovement traverses every optional-risk segment outward"), WalkWaypoints(TEXT("optional outward"), Layout.OptionalRouteWaypoints, false));
+    TestTrue(TEXT("Walking CharacterMovement traverses every optional-risk segment outward without jumping"), WalkWaypoints(TEXT("optional outward walking"), Layout.OptionalRouteWaypoints, false, false));
+    TestTrue(TEXT("Sprint optional route starts on walkable ground"), PlaceOnWalkableGround(TEXT("sprint optional route start"), Layout.OptionalRouteWaypoints[0]));
+    TestTrue(TEXT("Sprinting CharacterMovement traverses every optional-risk segment outward without jumping"), WalkWaypoints(TEXT("optional outward sprint"), Layout.OptionalRouteWaypoints, false, true));
     TestTrue(TEXT("Optional return starts on walkable ground"), PlaceOnWalkableGround(TEXT("optional return start"), Layout.OptionalRouteWaypoints.Last()));
-    TestTrue(TEXT("CharacterMovement traverses the optional-risk route back to its joint"), WalkWaypoints(TEXT("optional return"), Layout.OptionalRouteWaypoints, true));
+    TestTrue(TEXT("Walking CharacterMovement traverses the optional-risk route back to its joint without jumping"), WalkWaypoints(TEXT("optional return walking"), Layout.OptionalRouteWaypoints, true, false));
+    TestTrue(TEXT("Sprint optional return starts on walkable ground"), PlaceOnWalkableGround(TEXT("sprint optional return start"), Layout.OptionalRouteWaypoints.Last()));
+    TestTrue(TEXT("Sprinting CharacterMovement traverses the optional-risk route back to its joint without jumping"), WalkWaypoints(TEXT("optional return sprint"), Layout.OptionalRouteWaypoints, true, true));
     TestEqual(TEXT("Normal main traversal remains inside low phase"), Tide->GetPhase(), ETidePhase::Low);
     TestTrue(TEXT("Low water visibly sits below the lower route"), Tide->GetWaterSurfaceZ() < Layout.RouteWaypoints[9].Z);
 
@@ -317,7 +364,9 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Shortcut closure does not teleport a player on the ridge"), TestWorld.Character->GetActorLocation().Equals(PositionBeforeClosure, 1.0f));
 
     TestTrue(TEXT("Blue ridge starts on walkable ground"), PlaceOnWalkableGround(TEXT("blue ridge start"), Layout.AlternateRouteWaypoints[0]));
-    TestTrue(TEXT("CharacterMovement traverses the full elevated escape after shortcut closure"), WalkWaypoints(TEXT("blue ridge"), Layout.AlternateRouteWaypoints, false));
+    TestTrue(TEXT("Walking CharacterMovement traverses the full elevated escape after shortcut closure without jumping"), WalkWaypoints(TEXT("blue ridge walking"), Layout.AlternateRouteWaypoints, false, false));
+    TestTrue(TEXT("Sprint blue ridge starts on walkable ground"), PlaceOnWalkableGround(TEXT("sprint blue ridge start"), Layout.AlternateRouteWaypoints[0]));
+    TestTrue(TEXT("Sprinting CharacterMovement traverses the full elevated escape after shortcut closure without jumping"), WalkWaypoints(TEXT("blue ridge sprint"), Layout.AlternateRouteWaypoints, false, true));
     TestTrue(TEXT("Elevated escape returns to the settlement"), Layout.SettlementSafeBounds.IsInsideOrOn(TestWorld.Character->GetActorLocation()));
 
     TestWorld.Character->SetActorLocation(Layout.AlternateRouteWaypoints[2] + FVector(0.0f, 0.0f, 100.0f));
@@ -342,11 +391,17 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
             && TestWorld.Character->GetFeedback().Contains(TEXT("BLUE RIDGE")));
     TestTrue(TEXT("New wet-ground expedition salvage is acquired after the prior stock snapshot"),
         Inventory->TryAdd(TEXT("copper_wire"), 1, InventoryReason));
+    TestTrue(TEXT("Wet-ground grace test can press jump"), ExecuteActionBinding(TestWorld.Character->InputComponent, TEXT("Jump"), IE_Pressed, EKeys::SpaceBar));
+    TestWorld.Tick(0.05f);
+    TestTrue(TEXT("Wet-ground grace test is physically airborne after the jump"), TestWorld.Character->GetCharacterMovement()->IsFalling());
+    TestTrue(TEXT("Wet-ground grace test can release jump"), ExecuteActionBinding(TestWorld.Character->InputComponent, TEXT("Jump"), IE_Released, EKeys::SpaceBar));
     const FVector PositionDuringWarning = TestWorld.Character->GetActorLocation();
-    GameMode->Tick(4.8f);
+    GameMode->Tick(4.7f);
     TestTrue(TEXT("Less than five seconds of continuous wet exposure does not teleport"),
         TestWorld.Character->GetActorLocation().Equals(PositionDuringWarning, 1.0f)
             && !Layout.SettlementSafeBounds.IsInsideOrOn(TestWorld.Character->GetActorLocation()));
+    TestTrue(TEXT("Jumping over wet lower ground does not reset its five-second recovery grace"),
+        TestWorld.Character->GetCharacterMovement()->IsFalling());
     GameMode->Tick(0.2f);
     TestTrue(TEXT("Five seconds of continuous wet exposure recovers to settlement"),
         Layout.SettlementSafeBounds.IsInsideOrOn(TestWorld.Character->GetActorLocation()));
@@ -355,6 +410,167 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Wet recovery retains protected evidence"), Inventory->GetQuantity(TEXT("signal_station_logbook")), 1);
     TestEqual(TEXT("Wet recovery retains prior credits"), Inventory->GetCredits(), 19);
     TestTrue(TEXT("Wet recovery explains retained permanent state"), TestWorld.Character->GetFeedback().Contains(TEXT("prior stock, evidence and credits kept")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLowTideM1InvalidGroundRecoveryTest,
+    "LowTide.M1.Risk.InvalidGroundRecovery",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLowTideM1InvalidGroundRecoveryTest::RunTest(const FString& Parameters)
+{
+    FM1TestWorld TestWorld;
+    ALowTideGameMode* GameMode = TestWorld.World ? TestWorld.World->GetAuthGameMode<ALowTideGameMode>() : nullptr;
+    ALowTideCharacter* Character = TestWorld.Character;
+    if (!GameMode || !Character)
+    {
+        AddError(TEXT("Invalid-ground fixture failed to initialize."));
+        return false;
+    }
+    const FCoastalSceneLayout& Layout = GameMode->GetSceneLayout();
+    ULowTideInventoryComponent* Inventory = Character->GetInventory();
+    FString Reason;
+    Character->SetActorLocation(Layout.Mara->GetActorLocation());
+    TestTrue(TEXT("Invalid-ground fixture accepts the expedition"), Layout.Mara->Interact(Character));
+    TestTrue(TEXT("Invalid-ground fixture adds expedition ordinary salvage"), Inventory->TryAdd(TEXT("copper_wire"), 1, Reason));
+    TestTrue(TEXT("Invalid-ground fixture adds protected expedition evidence"), Inventory->TryAddProtected(TEXT("signal_station_logbook"), 1, Reason));
+    Inventory->AddCredits(23);
+
+    FHitResult GroundHit;
+    const FVector MidRoute = Layout.RouteWaypoints[5];
+    FCollisionQueryParams GroundQuery(SCENE_QUERY_STAT(M1InvalidGroundCheckpoint), false, Character);
+    TestTrue(TEXT("Mid-route checkpoint has dry physical support"), TestWorld.World->LineTraceSingleByChannel(GroundHit,
+        MidRoute + FVector(0.0f, 0.0f, 1000.0f), MidRoute - FVector(0.0f, 0.0f, 1000.0f), ECC_Pawn, GroundQuery));
+    if (!GroundHit.bBlockingHit)
+    {
+        return false;
+    }
+    Character->SetActorLocation(GroundHit.ImpactPoint + FVector(0.0f, 0.0f,
+        Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 3.0f), false, nullptr, ETeleportType::TeleportPhysics);
+    for (int32 Frame = 0; Frame < 12; ++Frame)
+    {
+        TestWorld.Tick(0.05f);
+    }
+    GameMode->Tick(0.1f);
+    const FVector Checkpoint = Character->GetActorLocation();
+    const int32 SalvageBeforeFall = Inventory->GetQuantity(TEXT("copper_wire"));
+    const int32 EvidenceBeforeFall = Inventory->GetQuantity(TEXT("signal_station_logbook"));
+    const int32 CreditsBeforeFall = Inventory->GetCredits();
+    const EM1MissionState MissionBeforeFall = GameMode->GetMissionState();
+
+    Character->SetActorLocation(FVector(Checkpoint.X, Checkpoint.Y, -1200.0f), false, nullptr, ETeleportType::TeleportPhysics);
+    GameMode->Tick(0.1f);
+    TestTrue(TEXT("Invalid fall restores the recently supported dry expedition checkpoint"), FVector::Dist(Character->GetActorLocation(), Checkpoint) < 200.0f);
+    TestEqual(TEXT("Invalid fall retains current expedition ordinary salvage"), Inventory->GetQuantity(TEXT("copper_wire")), SalvageBeforeFall);
+    TestEqual(TEXT("Invalid fall retains protected evidence"), Inventory->GetQuantity(TEXT("signal_station_logbook")), EvidenceBeforeFall);
+    TestEqual(TEXT("Invalid fall retains credits"), Inventory->GetCredits(), CreditsBeforeFall);
+    TestEqual(TEXT("Invalid fall retains mission progress"), GameMode->GetMissionState(), MissionBeforeFall);
+    TestTrue(TEXT("Invalid fall gives clear no-penalty feedback"), Character->GetFeedback().Contains(TEXT("Recovered from invalid ground; all items kept")));
+
+    ATideController* Tide = GameMode->GetTideController();
+    while (Tide->GetPhase() != ETidePhase::High)
+    {
+        Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    }
+    Character->SetActorLocation(Layout.RouteWaypoints[9] + FVector(0.0f, 0.0f,
+        Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 3.0f), false, nullptr, ETeleportType::TeleportPhysics);
+    GameMode->Tick(5.1f);
+    TestTrue(TEXT("Normal high-water recovery still returns to the settlement"), Layout.SettlementSafeBounds.IsInsideOrOn(Character->GetActorLocation()));
+    TestEqual(TEXT("Normal high-water recovery still removes post-snapshot ordinary salvage"), Inventory->GetQuantity(TEXT("copper_wire")), 0);
+    TestEqual(TEXT("Normal high-water recovery still retains protected evidence"), Inventory->GetQuantity(TEXT("signal_station_logbook")), EvidenceBeforeFall);
+    TestEqual(TEXT("Normal high-water recovery still retains credits"), Inventory->GetCredits(), CreditsBeforeFall);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLowTideM1JumpContainmentTest,
+    "LowTide.M1.Traversal.JumpContainment",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLowTideM1JumpContainmentTest::RunTest(const FString& Parameters)
+{
+    FM1TestWorld TestWorld;
+    ALowTideGameMode* GameMode = TestWorld.World ? TestWorld.World->GetAuthGameMode<ALowTideGameMode>() : nullptr;
+    ALowTideCharacter* Character = TestWorld.Character;
+    if (!GameMode || !Character || !GameMode->GetSceneLayout().ShortcutBlocker)
+    {
+        AddError(TEXT("Jump-containment fixture failed to initialize."));
+        return false;
+    }
+    const FCoastalSceneLayout& Layout = GameMode->GetSceneLayout();
+    ATideController* Tide = GameMode->GetTideController();
+    Character->SetActorLocation(Layout.Mara->GetActorLocation());
+    TestTrue(TEXT("Jump-containment fixture accepts the expedition and starts the tide clock"), Layout.Mara->Interact(Character));
+    TestTrue(TEXT("Jump-containment fixture tide clock is running"), Tide->IsClockRunning());
+    Tide->Tick(20.1f);
+    Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
+    Tide->Tick(Tide->GetSecondsUntilAccessCloses() + 0.1f);
+    TestFalse(TEXT("Jump-containment fixture closes the low shortcut"), Tide->IsAccessOpen());
+
+    const auto PlaceOnGround = [&TestWorld, Character](const FVector& Anchor)
+    {
+        FHitResult Ground;
+        FCollisionQueryParams Query(SCENE_QUERY_STAT(M1JumpContainmentGround), false, Character);
+        if (!TestWorld.World->LineTraceSingleByChannel(Ground, Anchor + FVector(0.0f, 0.0f, 1000.0f),
+            Anchor - FVector(0.0f, 0.0f, 1000.0f), ECC_Pawn, Query))
+        {
+            return false;
+        }
+        Character->SetActorLocation(Ground.ImpactPoint + FVector(0.0f, 0.0f,
+            Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 3.0f), false, nullptr, ETeleportType::TeleportPhysics);
+        Character->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+        Character->GetCharacterMovement()->StopMovementImmediately();
+        for (int32 Frame = 0; Frame < 5; ++Frame)
+        {
+            TestWorld.Tick(0.05f);
+        }
+        return true;
+    };
+    const auto SprintJumpAttempt = [this, &TestWorld, Character](const FString& Label, const FVector& Direction, float MaxAdvance)
+    {
+        const FVector Start = Character->GetActorLocation();
+        TestTrue(Label + TEXT(" starts grounded"), Character->GetCharacterMovement()->IsMovingOnGround());
+        TestTrue(Label + TEXT(" starts sprinting"), ExecuteActionBinding(Character->InputComponent, TEXT("Sprint"), IE_Pressed, EKeys::LeftShift));
+        TestTrue(Label + TEXT(" sends a jump press"), ExecuteActionBinding(Character->InputComponent, TEXT("Jump"), IE_Pressed, EKeys::SpaceBar));
+        float FurthestAdvance = 0.0f;
+        for (int32 Frame = 0; Frame < 40; ++Frame)
+        {
+            Character->AddMovementInput(Direction, 1.0f);
+            TestWorld.Tick(0.05f);
+            FurthestAdvance = FMath::Max(FurthestAdvance, FVector::DotProduct(Character->GetActorLocation() - Start, Direction));
+            if (Frame == 3)
+            {
+                ExecuteActionBinding(Character->InputComponent, TEXT("Jump"), IE_Released, EKeys::SpaceBar);
+            }
+        }
+        ExecuteActionBinding(Character->InputComponent, TEXT("Sprint"), IE_Released, EKeys::LeftShift);
+        TestTrue(Label + TEXT(" never crosses its authored collision limit"), FurthestAdvance < MaxAdvance);
+        TestFalse(Label + TEXT(" is blocked rather than masked by any recovery"), Character->GetFeedback().Contains(TEXT("Recovered")));
+    };
+    const auto ClearWetExposure = [&TestWorld, Character, &Layout]()
+    {
+        Character->SetActorLocation(Layout.PlayerStart, false, nullptr, ETeleportType::TeleportPhysics);
+        TestWorld.Tick(0.1f);
+    };
+
+    const FVector ShortcutDirection = (Layout.RouteWaypoints[8] - Layout.RouteWaypoints[7]).GetSafeNormal2D();
+    const FVector ShortcutAcross(-ShortcutDirection.Y, ShortcutDirection.X, 0.0f);
+    const FVector BlockerCenter = Layout.ShortcutBlocker->GetActorLocation();
+    ClearWetExposure();
+    TestTrue(TEXT("Closed shortcut center approach has walkable support"), PlaceOnGround(BlockerCenter - ShortcutDirection * 250.0f));
+    SprintJumpAttempt(TEXT("Sprint jump at closed shortcut center"), ShortcutDirection, 210.0f);
+    ClearWetExposure();
+    TestTrue(TEXT("Closed shortcut end approach has walkable support"), PlaceOnGround(BlockerCenter - ShortcutDirection * 250.0f + ShortcutAcross * 390.0f));
+    SprintJumpAttempt(TEXT("Sprint jump at closed shortcut near its end"), ShortcutDirection, 280.0f);
+
+    ClearWetExposure();
+    TestTrue(TEXT("Settlement boundary approach has walkable support"), PlaceOnGround(FVector(2600.0f, 0.0f, 0.0f)));
+    SprintJumpAttempt(TEXT("Sprint jump at settlement boundary"), FVector::ForwardVector, 500.0f);
+    const FVector OptionalStart = (Layout.OptionalRouteWaypoints[3] + Layout.OptionalRouteWaypoints[4]) * 0.5f;
+    const FVector OptionalDirection = (Layout.OptionalRouteWaypoints[4] - Layout.OptionalRouteWaypoints[3]).GetSafeNormal2D();
+    const FVector OptionalOutward(-OptionalDirection.Y, OptionalDirection.X, 0.0f);
+    ClearWetExposure();
+    TestTrue(TEXT("Optional branch boundary approach has walkable support"), PlaceOnGround(OptionalStart + OptionalOutward * 240.0f));
+    SprintJumpAttempt(TEXT("Sprint jump at optional branch boundary"), OptionalOutward, 500.0f);
     return true;
 }
 

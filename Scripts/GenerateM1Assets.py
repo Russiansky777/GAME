@@ -20,6 +20,14 @@ TERRAIN_OBJ_PATHS = {
 }
 TERRAIN_EXPECTED_BOUNDS = {}
 COASTAL_SCENE_CPP = os.path.join(PROJECT_DIR, "Source", "LowTide", "Private", "CoastalScene.cpp")
+ROUTE_FLOOR_WIDTH_SCALE = 1.16
+ROUTE_FLOOR_CENTER_OFFSET = -38.0
+ROUTE_FLOOR_HEIGHT = 70.0
+VISIBLE_SURFACE_OFFSET = -1.0
+SETTLEMENT_LANDING = ((2000.0, -800.0, 128.0), (3430.0, -3400.0, 128.0),
+                      900.0 * ROUTE_FLOOR_WIDTH_SCALE)
+SETTLEMENT_RAMP = ((3430.0, -3400.0, 128.0), (4002.0, -4440.0, 35.4),
+                   900.0 * ROUTE_FLOOR_WIDTH_SCALE)
 
 # These fixed points mirror FCoastalSceneLayout. They are authored level data, not runtime generation.
 TERRAIN_ROUTES = (
@@ -97,6 +105,14 @@ def validate_authored_routes():
         "OptionalRouteWaypoints": _parse_cpp_route(source, "OptionalRouteWaypoints", main_route),
     }
     _assert_routes_match(cpp_routes)
+    width_scale_match = re.search(
+        r"RouteFloorWidthScale\s*=\s*({})".format(_CPP_FLOAT), source)
+    if not width_scale_match:
+        raise RuntimeError("Could not find CoastalScene::RouteFloorWidthScale")
+    cpp_width_scale = float(width_scale_match.group(1).rstrip("f"))
+    if abs(cpp_width_scale - ROUTE_FLOOR_WIDTH_SCALE) > 0.0001:
+        raise RuntimeError("Terrain floor width scale {} does not match C++ {}".format(
+            ROUTE_FLOOR_WIDTH_SCALE, cpp_width_scale))
     log("Verified terrain routes against CoastalScene.cpp: main {}, alternate {}, optional {} points".format(
         len(cpp_routes["RouteWaypoints"]), len(cpp_routes["AlternateRouteWaypoints"]),
         len(cpp_routes["OptionalRouteWaypoints"])))
@@ -406,130 +422,418 @@ def write_shore_wedge_obj():
             obj.write("f {}\n".format(" ".join("{0}/{0}".format(value) for value in face)))
 
 
-def _smoothstep(value):
-    value = max(0.0, min(1.0, value))
-    return value * value * (3.0 - 2.0 * value)
+def _mesh():
+    return {"vertices": [], "faces": []}
 
 
-def _terrain_candidates(x, y):
-    candidates = []
-    for family, width, points in TERRAIN_ROUTES:
-        inner_radius = width * 0.5 + 60.0
-        for segment_index in range(len(points) - 1):
-            start = points[segment_index]
-            end = points[segment_index + 1]
-            delta_x = end[0] - start[0]
-            delta_y = end[1] - start[1]
-            length_squared = max(1.0, delta_x * delta_x + delta_y * delta_y)
-            alpha = max(0.0, min(1.0, ((x - start[0]) * delta_x + (y - start[1]) * delta_y) / length_squared))
-            closest_x = start[0] + delta_x * alpha
-            closest_y = start[1] + delta_y * alpha
-            distance = math.hypot(x - closest_x, y - closest_y)
-            organic_phase = alpha * math.tau + segment_index * 1.71 + family * 0.83
-            shoulder_reach = 1250.0 + 600.0 * (0.5 + 0.5 * math.sin(organic_phase))
-            outer_radius = inner_radius + shoulder_reach
-            if distance > outer_radius:
-                continue
-            route_z = start[2] + (end[2] - start[2]) * alpha
-            falloff = _smoothstep(max(0.0, distance - inner_radius) / shoulder_reach)
-            low_detail = abs(math.sin(x * 0.0019 + family) * math.sin(y * 0.0013 - segment_index)) * 14.0
-            segment_length = math.sqrt(length_squared + (end[2] - start[2]) ** 2)
-            # Mirrors AddBoxBetween's -38 cm centre offset and 35 cm rotated cube half-height exactly.
-            inner_height = route_z - 38.0 + 35.0 * segment_length / math.sqrt(length_squared)
-            submerged_edge = -640.0 - low_detail
-            height = inner_height + (submerged_edge - inner_height) * falloff - low_detail * falloff * (1.0 - falloff)
-            candidates.append((height, family, distance <= inner_radius))
-
-    # Mara's coast is a broad irregular shelf whose plateau stays just beneath the collision floor.
-    center_x, center_y = 0.0, -200.0
-    local_yaw = math.radians(4.0)
-    delta_x, delta_y = x - center_x, y - center_y
-    local_x = math.cos(local_yaw) * delta_x - math.sin(local_yaw) * delta_y
-    local_y = math.sin(local_yaw) * delta_x + math.cos(local_yaw) * delta_y
-    outside_x = max(abs(local_x) - 3100.0, 0.0)
-    outside_y = max(abs(local_y) - 3400.0, 0.0)
-    outside_distance = math.hypot(outside_x, outside_y)
-    outline_angle = math.atan2(local_y / 3400.0, local_x / 3100.0)
-    coast_reach = 1550.0 + 380.0 * math.sin(outline_angle * 3.0 + 0.55) + 180.0 * math.sin(outline_angle * 7.0)
-    if outside_distance <= coast_reach:
-        falloff = _smoothstep(outside_distance / max(800.0, coast_reach))
-        plateau = 110.0 - abs(math.sin(x * 0.0011) * math.sin(y * 0.0014)) * 8.0
-        candidates.append((plateau + (-660.0 - plateau) * falloff, 1, outside_distance <= 80.0))
-
-    # A stone islet grounds the signal-station plinth and joins it to the main-route shoulder.
-    station_distance = math.hypot(x - 22900.0, y + 500.0)
-    station_inner = 850.0
-    station_reach = 2150.0 + 180.0 * math.sin(math.atan2(y + 500.0, x - 22900.0) * 5.0)
-    if station_distance <= station_reach:
-        falloff = _smoothstep(max(0.0, station_distance - station_inner) / max(1.0, station_reach - station_inner))
-        candidates.append((50.0 + (-650.0 - 50.0) * falloff, 1, False))
-
-    return candidates
+def _add_polygon(mesh, vertices):
+    """Append an upward-facing convex polygon expressed counter-clockwise in gameplay XY."""
+    base = len(mesh["vertices"])
+    mesh["vertices"].extend(vertices)
+    triangles = []
+    for index in range(1, len(vertices) - 1):
+        face = (base, base + index, base + index + 1)
+        mesh["faces"].append(face)
+        triangles.append(tuple(mesh["vertices"][vertex] for vertex in face))
+    return triangles
 
 
-def _terrain_sample(x, y):
-    candidates = _terrain_candidates(x, y)
-    if not candidates:
-        return -680.0, None
-    # Where walk ribbons overlap, the lower authored route owns the ground so a raised ridge cannot cover it.
-    inner_routes = [candidate for candidate in candidates if candidate[2]]
-    chosen = min(inner_routes, key=lambda candidate: candidate[0]) if inner_routes else max(candidates, key=lambda candidate: candidate[0])
-    return chosen[0], chosen[1]
+def _add_quad(mesh, a, b, c, d):
+    return _add_polygon(mesh, (a, b, c, d))
+
+
+def _floor_surface_z(start, end, alpha):
+    horizontal = math.hypot(end[0] - start[0], end[1] - start[1])
+    length = math.sqrt(horizontal * horizontal + (end[2] - start[2]) ** 2)
+    route_z = start[2] + (end[2] - start[2]) * alpha
+    return (route_z + ROUTE_FLOOR_CENTER_OFFSET
+            + ROUTE_FLOOR_HEIGHT * 0.5 * length / max(1.0, horizontal))
+
+
+def _triangle_z_at_xy(triangle, x, y):
+    a, b, c = triangle
+    denominator = ((b[1] - c[1]) * (a[0] - c[0])
+                   + (c[0] - b[0]) * (a[1] - c[1]))
+    if abs(denominator) < 0.000001:
+        return None
+    wa = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / denominator
+    wb = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / denominator
+    wc = 1.0 - wa - wb
+    if min(wa, wb, wc) < -0.000001:
+        return None
+    return wa * a[2] + wb * b[2] + wc * c[2]
+
+
+def _collision_heights_at_xy(x, y):
+    heights = []
+    for _, width, points in TERRAIN_ROUTES:
+        half_width = width * ROUTE_FLOOR_WIDTH_SCALE * 0.5
+        for start, end in zip(points, points[1:]):
+            dx, dy = end[0] - start[0], end[1] - start[1]
+            length_squared = dx * dx + dy * dy
+            alpha = ((x - start[0]) * dx + (y - start[1]) * dy) / max(1.0, length_squared)
+            if -0.0001 <= alpha <= 1.0001:
+                side_distance = abs((x - start[0]) * -dy + (y - start[1]) * dx) / math.sqrt(length_squared)
+                if side_distance <= half_width + 0.1:
+                    heights.append(_floor_surface_z(start, end, max(0.0, min(1.0, alpha))))
+        for point in points[:-1]:
+            if abs(x - point[0]) <= half_width + 0.1 and abs(y - point[1]) <= half_width + 0.1:
+                heights.append(point[2] + ROUTE_FLOOR_CENTER_OFFSET + ROUTE_FLOOR_HEIGHT * 0.5)
+
+    # BuildSettlement's rotated 6200 x 6800 x 180 collision-bearing cube.
+    radians = math.radians(4.0)
+    dx, dy = x, y + 200.0
+    local_x = math.cos(radians) * dx - math.sin(radians) * dy
+    local_y = math.sin(radians) * dx + math.cos(radians) * dy
+    if abs(local_x) <= 3100.1 and abs(local_y) <= 3400.1:
+        heights.append(125.0)
+    for transition_start, transition_end, transition_width in (SETTLEMENT_LANDING, SETTLEMENT_RAMP):
+        transition_dx = transition_end[0] - transition_start[0]
+        transition_dy = transition_end[1] - transition_start[1]
+        transition_length_squared = transition_dx * transition_dx + transition_dy * transition_dy
+        transition_alpha = ((x - transition_start[0]) * transition_dx
+                            + (y - transition_start[1]) * transition_dy) / transition_length_squared
+        transition_side = abs((x - transition_start[0]) * -transition_dy
+                              + (y - transition_start[1]) * transition_dx) / math.sqrt(transition_length_squared)
+        if (-0.0001 <= transition_alpha <= 1.0001
+                and transition_side <= transition_width * 0.5 + 0.1):
+            heights.append(_floor_surface_z(
+                transition_start, transition_end, max(0.0, min(1.0, transition_alpha))))
+    return heights
+
+
+def _validate_route_surfaces(meshes, route_triangles, cap_triangles, transition_triangles):
+    """Ray-test exported logical triangles against every hidden floor proxy in five lanes."""
+    max_difference = 0.0
+    sample_count = 0
+    all_triangles = []
+    for mesh in meshes.values():
+        all_triangles.extend(tuple(mesh["vertices"][index] for index in face) for face in mesh["faces"])
+
+    max_union_difference = [0.0]
+
+    def validate_exported_union(x, y, label):
+        collision_heights = _collision_heights_at_xy(x, y)
+        if not collision_heights:
+            raise RuntimeError("No floor proxy covers intended sample {}".format(label))
+        expected = max(collision_heights) + VISIBLE_SURFACE_OFFSET
+        hits = [_triangle_z_at_xy(triangle, x, y) for triangle in all_triangles]
+        hits = [value for value in hits if value is not None and abs(value - expected) <= 250.0]
+        if not hits:
+            raise RuntimeError("Exported terrain misses intended sample {} at {:.1f},{:.1f}".format(label, x, y))
+        actual = max(hits)
+        difference = abs(actual - expected)
+        max_union_difference[0] = max(max_union_difference[0], difference)
+        if difference > 2.0:
+            raise RuntimeError("Exported terrain/floor mismatch {}: visual {:.3f}, collision {:.3f}".format(
+                label, actual, expected - VISIBLE_SURFACE_OFFSET))
+
+    for route_index, (_, width, points) in enumerate(TERRAIN_ROUTES):
+        walk_half_width = width * ROUTE_FLOOR_WIDTH_SCALE * 0.5
+        for segment_index, (start, end) in enumerate(zip(points, points[1:])):
+            dx, dy = end[0] - start[0], end[1] - start[1]
+            horizontal = math.hypot(dx, dy)
+            side_x, side_y = -dy / horizontal, dx / horizontal
+            triangles = route_triangles[(route_index, segment_index)]
+            for alpha_step in range(21):
+                alpha = (alpha_step + 0.5) / 21.0
+                expected = _floor_surface_z(start, end, alpha)
+                for lane in (-0.48, -0.24, 0.0, 0.24, 0.48):
+                    x = start[0] + dx * alpha + side_x * walk_half_width * lane / 0.5
+                    y = start[1] + dy * alpha + side_y * walk_half_width * lane / 0.5
+                    hits = [_triangle_z_at_xy(triangle, x, y) for triangle in triangles]
+                    hits = [value for value in hits if value is not None]
+                    if not hits:
+                        raise RuntimeError("Visible route gap at route {} segment {} alpha {:.3f} lane {:.2f}".format(
+                            route_index, segment_index, alpha, lane))
+                    difference = min(abs(value - (expected + VISIBLE_SURFACE_OFFSET)) for value in hits)
+                    max_difference = max(max_difference, difference)
+                    validate_exported_union(x, y, "route {} segment {} alpha {:.3f} lane {:.2f}".format(
+                        route_index, segment_index, alpha, lane))
+                    sample_count += 1
+
+        # BuildPathRibbon adds a horizontal box at every segment start. Validate its full usable square.
+        for point_index in range(len(points) - 1):
+            expected = points[point_index][2] + ROUTE_FLOOR_CENTER_OFFSET + ROUTE_FLOOR_HEIGHT * 0.5
+            triangles = cap_triangles[(route_index, point_index)]
+            for x_lane in (-0.45, 0.0, 0.45):
+                for y_lane in (-0.45, 0.0, 0.45):
+                    x = points[point_index][0] + x_lane * width * ROUTE_FLOOR_WIDTH_SCALE
+                    y = points[point_index][1] + y_lane * width * ROUTE_FLOOR_WIDTH_SCALE
+                    hits = [_triangle_z_at_xy(triangle, x, y) for triangle in triangles]
+                    hits = [value for value in hits if value is not None]
+                    if not hits:
+                        raise RuntimeError("Visible junction gap at route {} point {} lane {},{}".format(
+                            route_index, point_index, x_lane, y_lane))
+                    difference = min(abs(value - (expected + VISIBLE_SURFACE_OFFSET)) for value in hits)
+                    max_difference = max(max_difference, difference)
+                    validate_exported_union(x, y, "route {} point {} cap {},{}".format(
+                        route_index, point_index, x_lane, y_lane))
+                    sample_count += 1
+
+    for transition_name, transition, triangles in zip(
+            ("landing", "ramp"), (SETTLEMENT_LANDING, SETTLEMENT_RAMP), transition_triangles):
+        start, end, width = transition
+        dx, dy = end[0] - start[0], end[1] - start[1]
+        horizontal = math.hypot(dx, dy)
+        side_x, side_y = -dy / horizontal, dx / horizontal
+        for alpha_step in range(21):
+            alpha = (alpha_step + 0.5) / 21.0
+            expected = _floor_surface_z(start, end, alpha) + VISIBLE_SURFACE_OFFSET
+            for lane in (-0.48, -0.24, 0.0, 0.24, 0.48):
+                x = start[0] + dx * alpha + side_x * width * lane
+                y = start[1] + dy * alpha + side_y * width * lane
+                hits = [_triangle_z_at_xy(triangle, x, y) for triangle in triangles]
+                hits = [value for value in hits if value is not None]
+                if not hits or min(abs(value - expected) for value in hits) > 0.02:
+                    raise RuntimeError("Settlement {} gap at alpha {:.3f} lane {:.2f}".format(
+                        transition_name, alpha, lane))
+                validate_exported_union(x, y, "settlement {} alpha {:.3f} lane {:.2f}".format(
+                    transition_name, alpha, lane))
+                sample_count += 1
+
+    # Measure the top envelope immediately before/after all three old-floor transition joins.
+    transition_joins = (SETTLEMENT_LANDING[0], SETTLEMENT_LANDING[1], SETTLEMENT_RAMP[1])
+    main_dx = TERRAIN_ROUTES[0][2][2][0] - TERRAIN_ROUTES[0][2][1][0]
+    main_dy = TERRAIN_ROUTES[0][2][2][1] - TERRAIN_ROUTES[0][2][1][1]
+    main_horizontal = math.hypot(main_dx, main_dy)
+    forward_x, forward_y = main_dx / main_horizontal, main_dy / main_horizontal
+    side_x, side_y = -forward_y, forward_x
+    max_join_step = 0.0
+    for join_index, join in enumerate(transition_joins):
+        for lane in (-0.48, -0.24, 0.0, 0.24, 0.48):
+            heights = []
+            for direction in (-1.0, 1.0):
+                x = join[0] + side_x * SETTLEMENT_RAMP[2] * lane + forward_x * 5.0 * direction
+                y = join[1] + side_y * SETTLEMENT_RAMP[2] * lane + forward_y * 5.0 * direction
+                collision_heights = _collision_heights_at_xy(x, y)
+                if not collision_heights:
+                    raise RuntimeError("No collision at settlement join {} lane {:.2f}".format(join_index, lane))
+                heights.append(max(collision_heights))
+                validate_exported_union(x, y, "settlement join {} lane {:.2f}".format(join_index, lane))
+            max_join_step = max(max_join_step, abs(heights[1] - heights[0]))
+    if max_join_step > 1.0:
+        raise RuntimeError("Settlement top-envelope step is {:.3f} cm".format(max_join_step))
+
+    if max_difference > 0.02:
+        raise RuntimeError("Visible route surface differs from floor proxies by {:.4f} cm".format(max_difference))
+    log("Verified {} triangle-ray samples across five route lanes and every junction cap; "
+        "max direct delta {:.4f} cm, exported-union delta {:.4f} cm, transition join step {:.4f} cm".format(
+            sample_count, max_difference, max_union_difference[0], max_join_step))
+
+
+def _rotate_xy(point, yaw_degrees, center):
+    radians = math.radians(yaw_degrees)
+    return (center[0] + math.cos(radians) * point[0] - math.sin(radians) * point[1],
+            center[1] + math.sin(radians) * point[0] + math.cos(radians) * point[1], point[2])
+
+
+def _add_settlement_shelf(mesh):
+    center = (0.0, -200.0)
+    # Match the rotated 6200 x 6800 collision floor exactly. Uneven shoulder reach softens
+    # the outer shoreline without extending an unsupported flat plateau past the proxy.
+    top_local = ((-3100.0, -3400.0, 124.0), (3100.0, -3400.0, 124.0),
+                 (3100.0, 3400.0, 124.0), (-3100.0, 3400.0, 124.0))
+    reach = (1300.0, 1550.0, 1420.0, 1680.0)
+    top = [_rotate_xy(vertex, -4.0, center) for vertex in top_local]
+    outer = []
+    for vertex, extra in zip(top_local, reach):
+        length = math.hypot(vertex[0], vertex[1])
+        outer_local = (vertex[0] * (length + extra) / length,
+                       vertex[1] * (length + extra) / length, -660.0)
+        outer.append(_rotate_xy(outer_local, -4.0, center))
+    _add_polygon(mesh, top)
+    lower = [(vertex[0], vertex[1], vertex[2] - 120.0) for vertex in top]
+    for index in range(len(top)):
+        next_index = (index + 1) % len(top)
+        _add_quad(mesh, top[index], lower[index], lower[next_index], top[next_index])
+        _add_quad(mesh, lower[index], outer[index], outer[next_index], lower[next_index])
+
+
+def _add_station_islet(mesh):
+    center = (22900.0, -500.0)
+    top = []
+    outer = []
+    for index in range(12):
+        angle = index * math.tau / 12.0
+        top.append((center[0] + math.cos(angle) * 900.0,
+                    center[1] + math.sin(angle) * 900.0, 49.0))
+        outer_radius = 1900.0 + 170.0 * math.sin(angle * 5.0 + 0.4)
+        outer.append((center[0] + math.cos(angle) * outer_radius,
+                      center[1] + math.sin(angle) * outer_radius, -650.0))
+    _add_polygon(mesh, top)
+    for index in range(len(top)):
+        next_index = (index + 1) % len(top)
+        _add_quad(mesh, top[index], outer[index], outer[next_index], top[next_index])
+
+
+def _lip_width(route_index, segment_index, sample_index, side_index):
+    # The elevated return terminates over the broad settlement shelf; a lip there would overlap
+    # the lower settlement walking plane, so the shelf itself supplies that final shoreline blend.
+    if route_index == 1 and segment_index == len(TERRAIN_ROUTES[1][2]) - 2:
+        return 0.0
+    # Let junction caps and intersecting route planes own segment ends; taper the lip in only
+    # after the turn so an adjacent segment's decorative edge cannot cover the walk surface.
+    if sample_index <= 3 or sample_index >= 7:
+        return 0.0
+    phase = route_index * 1.13 + segment_index * 1.71 + sample_index * 1.97 + side_index * 0.83
+    width = 104.0 + 31.0 * math.sin(phase) + 14.0 * math.sin(phase * 2.37 + 0.4)
+    return max(60.0, min(150.0, width))
+
+
+def _lip_z(surface_z):
+    # The lowest optional shelf sits almost exactly at the -134 cm low-water surface.
+    # Keep its outer lip just visible; elsewhere the lip rests roughly 1 cm below the floor-matched core.
+    return max(surface_z - 0.9, -133.75)
+
+
+def _safe_lip_width(inner, outward_x, outward_y, proposed_width, surface_z):
+    """Stop a decorative lip before it crosses a separate walking layer at another height."""
+    previous_distance = 0.0
+    for step in range(1, 11):
+        distance = proposed_width * step / 10.0
+        support = _collision_heights_at_xy(
+            inner[0] + outward_x * distance, inner[1] + outward_y * distance)
+        if support and abs(max(support) + VISIBLE_SURFACE_OFFSET - surface_z) > 2.0:
+            return previous_distance
+        previous_distance = distance
+    return proposed_width
 
 
 def write_terrain_objs():
-    grid_step = 200.0
-    x_values = [float(value) for value in range(-6000, 28001, int(grid_step))]
-    y_values = [float(value) for value in range(-10000, 10001, int(grid_step))]
-    column_count = len(x_values)
-    heights = []
-    for y in y_values:
-        heights.append([_terrain_sample(x, y)[0] for x in x_values])
+    meshes = {family: _mesh() for family in range(3)}
+    route_triangles = {}
+    cap_triangles = {}
 
-    faces_by_family = {0: [], 1: [], 2: []}
-    for row in range(len(y_values) - 1):
-        for column in range(column_count - 1):
-            center_x = (x_values[column] + x_values[column + 1]) * 0.5
-            center_y = (y_values[row] + y_values[row + 1]) * 0.5
-            _, family = _terrain_sample(center_x, center_y)
-            if family is None:
-                continue
-            lower_left = row * column_count + column
-            lower_right = lower_left + 1
-            upper_left = lower_left + column_count
-            upper_right = upper_left + 1
-            faces_by_family[family].append((lower_left, lower_right, upper_right))
-            faces_by_family[family].append((lower_left, upper_right, upper_left))
+    for route_index, (family, width, points) in enumerate(TERRAIN_ROUTES):
+        mesh = meshes[family]
+        half_width = width * ROUTE_FLOOR_WIDTH_SCALE * 0.5
+        for segment_index, (start, end) in enumerate(zip(points, points[1:])):
+            dx, dy = end[0] - start[0], end[1] - start[1]
+            horizontal = math.hypot(dx, dy)
+            side_x, side_y = -dy / horizontal, dx / horizontal
+            start_z = _floor_surface_z(start, end, 0.0) + VISIBLE_SURFACE_OFFSET
+            end_z = _floor_surface_z(start, end, 1.0) + VISIBLE_SURFACE_OFFSET
+            start_right = (start[0] - side_x * half_width, start[1] - side_y * half_width, start_z)
+            end_right = (end[0] - side_x * half_width, end[1] - side_y * half_width, end_z)
+            end_left = (end[0] + side_x * half_width, end[1] + side_y * half_width, end_z)
+            start_left = (start[0] + side_x * half_width, start[1] + side_y * half_width, start_z)
+            route_triangles[(route_index, segment_index)] = _add_quad(
+                mesh, start_right, end_right, end_left, start_left)
+
+            subdivisions = 10
+            right_inner = []
+            left_inner = []
+            right_lip = []
+            left_lip = []
+            right_lower = []
+            left_lower = []
+            right_outer = []
+            left_outer = []
+            for sample_index in range(subdivisions + 1):
+                alpha = sample_index / float(subdivisions)
+                center_x = start[0] + dx * alpha
+                center_y = start[1] + dy * alpha
+                surface_z = _floor_surface_z(start, end, alpha) + VISIBLE_SURFACE_OFFSET
+                inner_right = (center_x - side_x * half_width, center_y - side_y * half_width, surface_z)
+                inner_left = (center_x + side_x * half_width, center_y + side_y * half_width, surface_z)
+                right_width = _safe_lip_width(
+                    inner_right, -side_x, -side_y,
+                    _lip_width(route_index, segment_index, sample_index, 0), surface_z)
+                left_width = _safe_lip_width(
+                    inner_left, side_x, side_y,
+                    _lip_width(route_index, segment_index, sample_index, 1), surface_z)
+                right_height = _lip_z(surface_z)
+                left_height = _lip_z(surface_z)
+                lip_right = (inner_right[0] - side_x * right_width,
+                             inner_right[1] - side_y * right_width, right_height)
+                lip_left = (inner_left[0] + side_x * left_width,
+                            inner_left[1] + side_y * left_width, left_height)
+                reach = 920.0 + 150.0 * math.sin(
+                    segment_index * 1.71 + sample_index * 1.19 + family * 0.83)
+                right_inner.append(inner_right)
+                left_inner.append(inner_left)
+                right_lip.append(lip_right)
+                left_lip.append(lip_left)
+                right_lower.append((lip_right[0], lip_right[1], lip_right[2] - 120.0))
+                left_lower.append((lip_left[0], lip_left[1], lip_left[2] - 120.0))
+                right_outer.append((lip_right[0] - side_x * reach, lip_right[1] - side_y * reach, -650.0))
+                left_outer.append((lip_left[0] + side_x * reach, lip_left[1] + side_y * reach, -650.0))
+            for sample_index in range(subdivisions):
+                next_index = sample_index + 1
+                _add_quad(mesh, right_inner[sample_index], right_lip[sample_index],
+                          right_lip[next_index], right_inner[next_index])
+                _add_quad(mesh, right_lip[sample_index], right_lower[sample_index],
+                          right_lower[next_index], right_lip[next_index])
+                _add_quad(mesh, right_lower[sample_index], right_outer[sample_index],
+                          right_outer[next_index], right_lower[next_index])
+                _add_quad(mesh, left_inner[sample_index], left_inner[next_index],
+                          left_lip[next_index], left_lip[sample_index])
+                _add_quad(mesh, left_lip[sample_index], left_lip[next_index],
+                          left_lower[next_index], left_lower[sample_index])
+                _add_quad(mesh, left_lower[sample_index], left_lower[next_index],
+                          left_outer[next_index], left_outer[sample_index])
+
+        # Mirror each horizontal hidden waypoint box so junctions have no invisible square corners.
+        for point_index, point in enumerate(points[:-1]):
+            cap_half = half_width
+            cap_z = point[2] + ROUTE_FLOOR_CENTER_OFFSET + ROUTE_FLOOR_HEIGHT * 0.5 + VISIBLE_SURFACE_OFFSET
+            cap_triangles[(route_index, point_index)] = _add_quad(
+                mesh,
+                (point[0] - cap_half, point[1] - cap_half, cap_z),
+                (point[0] + cap_half, point[1] - cap_half, cap_z),
+                (point[0] + cap_half, point[1] + cap_half, cap_z),
+                (point[0] - cap_half, point[1] + cap_half, cap_z))
+
+    transition_triangles = []
+    for transition_start, transition_end, transition_width in (SETTLEMENT_LANDING, SETTLEMENT_RAMP):
+        transition_dx = transition_end[0] - transition_start[0]
+        transition_dy = transition_end[1] - transition_start[1]
+        transition_horizontal = math.hypot(transition_dx, transition_dy)
+        transition_side_x = -transition_dy / transition_horizontal
+        transition_side_y = transition_dx / transition_horizontal
+        transition_half = transition_width * 0.5
+        transition_start_z = (_floor_surface_z(transition_start, transition_end, 0.0)
+                              + VISIBLE_SURFACE_OFFSET)
+        transition_end_z = (_floor_surface_z(transition_start, transition_end, 1.0)
+                            + VISIBLE_SURFACE_OFFSET)
+        transition_triangles.append(_add_quad(
+            meshes[0],
+            (transition_start[0] - transition_side_x * transition_half,
+             transition_start[1] - transition_side_y * transition_half, transition_start_z),
+            (transition_end[0] - transition_side_x * transition_half,
+             transition_end[1] - transition_side_y * transition_half, transition_end_z),
+            (transition_end[0] + transition_side_x * transition_half,
+             transition_end[1] + transition_side_y * transition_half, transition_end_z),
+            (transition_start[0] + transition_side_x * transition_half,
+             transition_start[1] + transition_side_y * transition_half, transition_start_z)))
+
+    _add_settlement_shelf(meshes[1])
+    _add_station_islet(meshes[1])
+    _validate_route_surfaces(meshes, route_triangles, cap_triangles, transition_triangles)
 
     asset_names = tuple(TERRAIN_OBJ_PATHS.keys())
     for family, asset_name in enumerate(asset_names):
-        faces = faces_by_family[family]
-        used_indices = sorted({index for face in faces for index in face})
-        remap = {old_index: new_index + 1 for new_index, old_index in enumerate(used_indices)}
-        logical_vertices = []
-        for old_index in used_indices:
-            row, column = divmod(old_index, column_count)
-            logical_vertices.append((x_values[column], y_values[row], heights[row][column]))
+        vertices = meshes[family]["vertices"]
+        faces = meshes[family]["faces"]
         TERRAIN_EXPECTED_BOUNDS[asset_name] = (
-            tuple(min(vertex[axis] for vertex in logical_vertices) for axis in range(3)),
-            tuple(max(vertex[axis] for vertex in logical_vertices) for axis in range(3)),
+            tuple(min(vertex[axis] for vertex in vertices) for axis in range(3)),
+            tuple(max(vertex[axis] for vertex in vertices) for axis in range(3)),
         )
         output_path = TERRAIN_OBJ_PATHS[asset_name]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8", newline="\n") as obj:
-            obj.write("# LOW TIDE authored coastal terrain section {}\n".format(family))
-            for old_index in used_indices:
-                row, column = divmod(old_index, column_count)
-                # UE's OBJ converter reflects source Y when converting right-handed OBJ into Unreal space.
-                # Pre-reflect terrain Y so the imported mesh lands on the authored gameplay coordinates.
-                obj.write("v {:.3f} {:.3f} {:.3f}\n".format(x_values[column], -y_values[row], heights[row][column]))
-            for old_index in used_indices:
-                row, column = divmod(old_index, column_count)
-                obj.write("vt {:.6f} {:.6f}\n".format(column / max(1, column_count - 1), row / max(1, len(y_values) - 1)))
+            obj.write("# LOW TIDE continuous route terrain section {}\n".format(family))
+            for vertex in vertices:
+                # UE's OBJ converter reflects source Y. Pre-reflect to retain authored gameplay coordinates.
+                obj.write("v {:.3f} {:.3f} {:.3f}\n".format(vertex[0], -vertex[1], vertex[2]))
+            for index in range(len(vertices)):
+                obj.write("vt {:.6f} {:.6f}\n".format((index % 17) / 16.0, (index % 13) / 12.0))
             for face in faces:
-                # The pre-reflection changes handedness, so reverse source winding to keep top faces upward.
-                obj.write("f {}\n".format(" ".join("{0}/{0}".format(remap[index]) for index in reversed(face))))
-        log("Authored terrain {}: {} vertices, {} triangles".format(asset_name, len(used_indices), len(faces)))
+                # Pre-reflection changes handedness, so reverse winding to retain upward top faces.
+                obj.write("f {}\n".format(" ".join("{0}/{0}".format(index + 1) for index in reversed(face))))
+        log("Authored continuous terrain {}: {} vertices, {} triangles".format(
+            asset_name, len(vertices), len(faces)))
 
 
 def import_rock(material):

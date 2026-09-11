@@ -58,3 +58,11 @@ Model-routing update (2026-09-11): A successful explicitly selected GPT-5.3-Code
 Sources used for routing policy:
 - [Model speed configuration](https://learn.chatgpt.com/docs/agent-configuration/speed)
 - [Subagent configuration](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+
+## 2026-09-11 — consolidated traversal/usability pass
+
+Use the Director-approved traversal contract for the current M1 pass: 650 cm/s walking, 1040 cm/s sprinting, Space for one 420 cm/s jump, 1.3 gravity, 0.2 air control, 45 cm step height and 45° walkable slope. These numbers remain reversible playtest tuning. The speed increase preserves the existing 1.6× walk/sprint ratio. Jumping supports ordinary traversal only and must not compensate for broken geometry or bypass tide blockers.
+
+Scene continuity is defined by visible ground and collision agreement across the complete main route, optional-risk branch, elevated return and every M0.5/M1 transition. The terrain uses independent pitched visual ribbons/caps over route-floor collision, a 1 cm visual offset beneath the proxies, and a 1.16 width scale behind boundaries. Keep tide timing at 300/180 seconds unless testing demonstrates that the speed increase obviously breaks the intended experience. Automated evidence and remaining review status belong in CURRENT_STATE; visual quality review remains pending.
+
+The invalid-fall fallback threshold is -1000 cm. GameMode restores the last supported dry spot, or the expedition start if submerged, while retaining inventory, mission and expedition snapshot state. Normal tide-failure salvage penalties are unchanged. Watcher movement remains 845 cm/s, preserving its existing 1.3× relationship to the 650 cm/s player walk speed.

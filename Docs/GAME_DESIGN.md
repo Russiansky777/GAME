@@ -34,3 +34,11 @@ LOW TIDE targets high-quality stylized semi-cartoon first-person 3D, not semi-re
 Clean silhouettes, simplified attractive geometry, moderate detail, painterly/clean materials. Warm, appealing coastal daylight contrasts with mystery/dark-fantasy mood during anomalous low tide. Target commercial Steam presentation; avoid a cheap mobile/low-poly prototype appearance. M0.5 greybox is a mechanics test, not final art quality.
 
 Use reusable master materials and small material families. Budget geometry/textures by visual importance; keep shaders, lights, foliage, overdraw and draw calls restrained. Economical attractive water and lower-end GPU scalability are required. Keep the conservative rendering baseline unless measured visual payoff justifies changes. No photorealistic asset pipeline without explicit Director approval.
+
+## Consolidated traversal pass — 2026-09-11
+
+The approved M1 traversal tuning is 650 cm/s normal walking and 1040 cm/s sprinting (the existing 1.6× advantage, approximately 30% above the prior 500/800 tuning). Space performs one standard jump: 420 cm/s launch velocity, 1.3 gravity scale, 0.2 air control, 45 cm automatic step-up and a 45° walkable-floor limit. Jumping is a normal traversal ability for modest terrain variation, never a workaround for missing route geometry, a tide-access bypass or a way through major blockers.
+
+The main, optional-risk and elevated return routes must read as one continuous playable surface across the settlement/M0.5 to M1 transitions. Visual ground and collision should agree; simple collision proxies are preferred. The shortcut closure and elevated escape remain unchanged, with tide timing at 300 seconds low tide and 180 seconds rising tide pending evidence of a real balance break.
+
+If the player falls below -1000 cm, the GameMode safety net restores the last supported dry spot, or the expedition start if submerged, while retaining inventory, mission and expedition snapshot state. Normal tide-failure salvage penalties remain unchanged. This is a fallback for rare geometry failures, not the intended route experience.

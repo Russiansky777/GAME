@@ -3,6 +3,8 @@
 #include "Misc/AutomationTest.h"
 
 #include "Components/InputComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
@@ -112,6 +114,89 @@ bool ExecuteActionBinding(UInputComponent* InputComponent, FName ActionName, EIn
     }
     return false;
 }
+
+void TickWorld(UWorld* World, int32 Frames, float DeltaSeconds = 1.0f / 60.0f)
+{
+    for (int32 Frame = 0; Frame < Frames; ++Frame)
+    {
+        World->Tick(LEVELTICK_All, DeltaSeconds);
+        ++GFrameCounter;
+    }
+}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLowTideTraversalControlsTest,
+    "LowTide.M05.Traversal.ControlsAndGrounding",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLowTideTraversalControlsTest::RunTest(const FString& Parameters)
+{
+    FLowTideTestWorld TestWorld;
+    UWorld* World = TestWorld.World;
+    APlayerController* Controller = World ? World->SpawnActor<APlayerController>() : nullptr;
+    ALowTideCharacter* Character = World ? World->SpawnActor<ALowTideCharacter>(FVector(-300.0f, 0.0f, 190.0f), FRotator::ZeroRotator) : nullptr;
+    TestNotNull(TEXT("Traversal fixture controller exists"), Controller);
+    TestNotNull(TEXT("Traversal fixture character exists"), Character);
+    if (!World || !Controller || !Character)
+    {
+        return false;
+    }
+    Controller->SetPlayer(NewObject<ULocalPlayer>(GEngine));
+    Controller->Possess(Character);
+    TickWorld(World, 90);
+
+    UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+    TestEqual(TEXT("Shared character walk speed is exploration tuning"), Character->GetWalkSpeed(), 650.0f);
+    TestEqual(TEXT("Shared character sprint speed preserves the 60 percent advantage"), Character->GetSprintSpeed(), 1040.0f);
+    TestEqual(TEXT("Jump uses a modest initial vertical speed"), Movement->JumpZVelocity, 420.0f);
+    TestEqual(TEXT("Character uses the intended heavier gravity"), Movement->GravityScale, 1.3f);
+    TestEqual(TEXT("Character has restrained air control"), Movement->AirControl, 0.2f);
+    TestEqual(TEXT("Small curbs use the configured automatic step height"), Movement->MaxStepHeight, 45.0f);
+    TestEqual(TEXT("Comfortable terrain uses the configured walkable slope"), Movement->GetWalkableFloorAngle(), 45.0f);
+    TestEqual(TEXT("Jump count is limited to one"), Character->JumpMaxCount, 1);
+    const float GroundZ = Character->GetActorLocation().Z;
+    TestTrue(TEXT("Jump pressed binding exists and executes"), ExecuteActionBinding(Character->InputComponent, TEXT("Jump"), IE_Pressed));
+    TickWorld(World, 1);
+    const float VerticalVelocityAfterFirstJumpFrame = Movement->Velocity.Z;
+    TestTrue(TEXT("First jump physically enters the air"), Movement->IsFalling() && Character->JumpCurrentCount == 1);
+    TestTrue(TEXT("Jump release binding exists and executes"), ExecuteActionBinding(Character->InputComponent, TEXT("Jump"), IE_Released));
+    TestTrue(TEXT("A second jump press is received while airborne"), ExecuteActionBinding(Character->InputComponent, TEXT("Jump"), IE_Pressed));
+    TickWorld(World, 1);
+    TestTrue(TEXT("Airborne second press cannot reset upward velocity or add a jump"), Character->JumpCurrentCount == 1
+        && Movement->Velocity.Z < VerticalVelocityAfterFirstJumpFrame);
+    ExecuteActionBinding(Character->InputComponent, TEXT("Jump"), IE_Released);
+    float PeakZ = GroundZ;
+    for (int32 Frame = 0; Frame < 180; ++Frame)
+    {
+        TickWorld(World, 1);
+        PeakZ = FMath::Max(PeakZ, Character->GetActorLocation().Z);
+    }
+    TestTrue(TEXT("Jump reaches a natural roughly 69 cm height"), PeakZ - GroundZ >= 50.0f && PeakZ - GroundZ <= 100.0f);
+    TestTrue(TEXT("Jump returns to stable walking ground"), Movement->IsMovingOnGround());
+
+    const FVector CurbStart = Character->GetActorLocation();
+    AActor* Curb = World->SpawnActor<AActor>();
+    UBoxComponent* CurbBox = Curb ? NewObject<UBoxComponent>(Curb, TEXT("TraversalCurb")) : nullptr;
+    TestNotNull(TEXT("Physical curb fixture spawns"), CurbBox);
+    if (!CurbBox)
+    {
+        return false;
+    }
+    Curb->SetRootComponent(CurbBox);
+    CurbBox->SetBoxExtent(FVector(25.0f, 250.0f, 20.0f));
+    CurbBox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    CurbBox->SetCollisionResponseToAllChannels(ECR_Block);
+    CurbBox->RegisterComponent();
+    Curb->SetActorLocation(CurbStart + FVector(160.0f, 0.0f,
+        -Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 20.0f));
+    for (int32 Frame = 0; Frame < 90; ++Frame)
+    {
+        Character->AddMovementInput(FVector::ForwardVector, 1.0f);
+        TickWorld(World, 1);
+    }
+    TestTrue(TEXT("CharacterMovement steps over a 40 cm curb without jumping"), Character->GetActorLocation().X > CurbStart.X + 240.0f);
+    TestTrue(TEXT("Curb traversal finishes grounded"), Movement->IsMovingOnGround());
+    return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLowTideExpeditionRoundTripTest,

@@ -194,9 +194,9 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
             const FVector Side = RouteSide(Start, End);
             if (!Layout.SettlementSafeBounds.IsInsideOrOn(Mid))
             {
-                SweepBlocks(FString::Printf(TEXT("%s segment %d left edge"), *RouteName, Index + 1),
+                SweepBlocks(FString::Printf(TEXT("%s segment %d left edge blocks a jump-height capsule"), *RouteName, Index + 1),
                     Mid + Up, Mid + Up + Side * (Width * 0.5f + 3000.0f));
-                SweepBlocks(FString::Printf(TEXT("%s segment %d right edge"), *RouteName, Index + 1),
+                SweepBlocks(FString::Printf(TEXT("%s segment %d right edge blocks a jump-height capsule"), *RouteName, Index + 1),
                     Mid + Up, Mid + Up - Side * (Width * 0.5f + 3000.0f));
             }
             SweepClear(FString::Printf(TEXT("%s segment %d center stays clear"), *RouteName, Index + 1),
@@ -213,6 +213,8 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         const FVector ShortcutStart = Layout.RouteWaypoints[7] + FVector(0.0f, 0.0f, 210.0f);
         const FVector ShortcutEnd = Layout.RouteWaypoints[8] + FVector(0.0f, 0.0f, 210.0f);
         SweepBlocks(TEXT("Returning tide closes only the low shortcut"), ShortcutStart, ShortcutEnd);
+        SweepBlocks(TEXT("Closed low shortcut blocks a jump-height capsule"),
+            ShortcutStart + FVector(0.0f, 0.0f, 70.0f), ShortcutEnd + FVector(0.0f, 0.0f, 70.0f));
     }
 
     TestNotNull(TEXT("Mara is returned by the scene layout"), Layout.Mara.Get());
