@@ -21,7 +21,7 @@
 | D: volume | 439 GiB total, about 129 GiB free |
 | Unreal / Epic Launcher | UE not installed; Epic Launcher installed and self-updated successfully |
 | Blender | Not found; not needed for M0.5 |
-| VS / MSVC / Windows SDK | VS Installer installed; requested C++/SDK install stopped with 1618 (another installation running) |
+| VS / MSVC / Windows SDK | VS Community 2026 18.10 installed; MSVC 14.50 and SDK 26100 verified by Win64 compile/run |
 | .NET | Host exists; no SDKs returned by dotnet --list-sdks |
 
 Discovery: PATH, Program Files, Epic manifest, Unreal user registration, uninstall registry, Windows Kits registration, executable searches under user Programs/Documents, C:\PERENOS and D:\LG BACK. Not an exhaustive whole-disk scan. WMI GPU RAM overflowed; NVIDIA's 6 GiB result is authoritative here. Free space is a snapshot.
@@ -35,8 +35,14 @@ Discovery: PATH, Program Files, Epic manifest, Unreal user registration, uninsta
 - Windows UI control could not inspect msiexec.exe (product policy block). Epic startup snapshots subsequently failed with 'foreground window did not report a process id'; refreshed window selection also failed during updater. Use fresh window selection after sign-in; never reuse old handles/coordinates or automate around a policy block.
 - No .uproject, gameplay implementation, engine launch, compile, packaging or performance result. No game bugs assessed. Setup is incomplete.
 
-## Explicit next action after Director accepts Epic license
-1. Refresh launcher state after license acceptance. Inspect 5.8 installation options/manifest and available update to resolve 5.8.0 UI versus requested 5.8.2. Use Windows core components only; inspect footprint, omit debug symbols/samples/mobile/console platforms. Pause at any further unavoidable license/UAC prompt.
-2. Check existing VS installer completion/logs before retrying anything. Verify installed components and actual MSVC/SDK versions; later verify UnrealBuildTool discovery. No broad optional workloads.
-3. Create minimal project in this repository, compile, launch Unreal, inspect logs and package/launch Win64 before major M0.5 implementation.
-4. Implement M0.5 gates, keeping CURRENT_STATE current and committing/pushing known-good checkpoints. No Fast mode or automatic-approval changes. No purchases.
+## Latest verified progress — 2026-09-11 02:23 local
+- Supersedes pending-license/compiler notes above: Director accepted license; UE 5.8.2 installation is running at C:\Program Files\Epic Games\UE_5.8. Launcher now explicitly displays 5.8.2; log resolves build 5.8.2-56702186.
+- VS installation retry completed exit 0. vswhere reports Community 2026 18.10.12201.205 complete/launchable with no reboot required. MSVC 19.50.35738 and Windows SDK 10.0.26100.0 compiled and ran a C++20 Win64 program calling GetSystemInfo. Probe files are ignored under Artifacts/ToolchainCheck. VS 2026 uses Common7/Tools/VsDevCmd.bat for environment setup; do not assume old VC/Auxiliary/Build/vcvars64.bat path.
+- User reported UE estimate stuck at zero minutes. Read-only measurements at 02:23:02 and 02:23:32 show Engine grew from 60,028 files / 10,419,502,014 bytes to 69,793 files / 12,901,895,749 bytes. Installation is actively writing files, not hung at this observation. Approximately 236 GiB free. Do not restart or delete installation/cache based on the time estimate.
+- Logs show prior pause/resume requests; their cancellation entries are not evidence of a new independent failure. Current installation not yet registered complete. Selected tags: core, templates, engine_source. Bridge and Fab were queued in Launcher; attempted UI cancellation was not verified. Check optional components after core installation.
+- No Unreal project or packaged game yet. Engine launch/UBT/package verification remain outstanding.
+
+## Explicit next action
+1. Let the active installation finish uninterrupted. Verify Launcher completion and Engine/Build/Build.version, then check installed options and avoid unnecessary additional downloads.
+2. Launch Unreal and compile/package/run a minimal Win64 project in this repository before major M0.5 implementation. Check logs and actual toolset selection.
+3. Implement M0.5 gates, update this state, commit/push known-good checkpoints. Keep manual approvals; no Fast mode or purchases.
