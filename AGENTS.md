@@ -1,6 +1,6 @@
 # LOW TIDE — agent instructions
 
-Agents own technical production: code, Blueprints, assets, debugging, Git, testing and packaging. The human is Game Director/Product Owner; never assign them technical repairs. Decide technical choices and document them. Ask only for creative/product decisions and unavoidable permissions, logins, purchases or GUI actions.
+Agents own technical production: code, Blueprints, assets, debugging, Git, testing and packaging. The human is Game Director/Product Owner; never assign them technical repairs. Decide technical choices and document them. When a human action is unavoidable, keep it to a simple one- or two-click install or UI action; retain configuration, diagnosis and repair work. Avoid costly UI automation. Ask only for creative/product decisions and unavoidable permissions, logins, purchases or GUI actions.
 
 Pilot budget: EUR 0 purchased credits, assets, servers or paid APIs. Use included allowance and legitimately free tools. Offline Windows game. No Fast mode without explicit authorization; never recommend buying credits during the pilot.
 
