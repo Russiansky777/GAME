@@ -1,13 +1,14 @@
 # LOW TIDE
 
-Offline first-person island exploration game. M0.5 implements a primitive coastal
-greybox, tide access, salvage collection, inventory and one trader. The approved
-final direction is high-quality stylized 3D; these primitives test mechanics only.
+Offline first-person coastal exploration game. M0.5 is an accepted historical
+greybox. M1 is the current authored stylized expedition candidate. Its fresh
+Win64 package, stationary performance capture and eight-test automation suite
+pass; manual timing/audio/art review and Director acceptance are pending.
 
 ## Development
 
 Unreal Engine 5.8.2 (CL 56702186), Visual Studio Community 2026, MSVC 14.50,
-Windows SDK 10.0.26100.0 and .NET Framework 4.8 SDK. Unreal uses its bundled .NET 10.
+Windows SDK 10.0.26100.0 and Unreal's bundled .NET 10.
 
 From the repository root in PowerShell:
 
@@ -19,16 +20,24 @@ From the repository root in PowerShell:
 
 The script defaults to `C:\Program Files\Epic Games\UE_5.8`; override with
 `-EngineRoot` if needed. Packaged output goes to ignored `Artifacts/Windows`.
-Open `LowTide.uproject` to work in the editor. Play starts the C++ authored greybox
-on the engine Entry map. Launch the packaged game with `Artifacts/Windows/LowTide.exe`.
+Open `LowTide.uproject` for Editor work. The default game launch builds the
+M1 slice on the engine Entry map.
 
-WASD moves, mouse looks, E interacts/closes trade, I opens/closes inventory,
-1–5 sells one matching item at Mara, Esc quits. Hold Left Shift to sprint at
-about 1.6× walking speed without stamina. The settlement, causeway and shelf
-have a closed playable perimeter, with a warning before tide recovery. Director
-manual retest remains. Follow the causeway during low tide, collect salvage, return to the
-orange trader and sell. The provisional recovery rule retains evidence, credits
-and permanent state while removing only ordinary unsold salvage from the current
-expedition. The accelerated tide cycle repeats every two minutes. Sessions do not save yet.
+## M1 play
 
-See `Docs/CURRENT_STATE.md` for actual validation results and next steps.
+WASD moves, mouse looks, E interacts or closes trade, I opens/closes the
+inventory, 1–8 sell a matching inventory slot at Mara, Esc quits, and Left Shift
+sprints. Sessions do not save yet.
+
+Speak to Mara to accept the expedition and start the tide. Follow the amber
+low-tide route to the signal logbook, then return to Mara. The shrine branch is
+an optional deeper-risk route for the rare artifact. As water rises, the low
+shortcut closes: follow the blue posts along the elevated escape route home.
+The phenomenon can force recovery; ordinary unsold expedition salvage is removed,
+while evidence, credits and permanent state remain.
+
+The automated M1 suite verifies direct mission interactions, normal
+CharacterMovement over the main/optional/escape routes, tide closure, recovery,
+and containment. It does not replace a manual full playthrough or validate the
+8–12 minute target duration. `Artifacts/Windows/LowTide.exe` is the current M1
+candidate package; see `Docs/CURRENT_STATE.md` for its exact evidence and limits.

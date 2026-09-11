@@ -25,6 +25,20 @@ bool ULowTideInventoryComponent::TryAdd(FName ItemId, int32 Quantity, FString& O
     return true;
 }
 
+bool ULowTideInventoryComponent::TryAddProtected(FName ItemId, int32 Quantity, FString& OutReason)
+{
+    if (ItemId.IsNone() || Quantity <= 0)
+    {
+        OutReason = TEXT("Invalid protected item transfer.");
+        return false;
+    }
+    Quantities.FindOrAdd(ItemId) += Quantity;
+    CapacityExemptItems.Add(ItemId);
+    OnInventoryChanged.Broadcast();
+    OutReason.Reset();
+    return true;
+}
+
 bool ULowTideInventoryComponent::TrySell(FName ItemId, int32 Quantity, int32 CreditValue)
 {
     int32* Existing = Quantities.Find(ItemId);
@@ -37,6 +51,7 @@ bool ULowTideInventoryComponent::TrySell(FName ItemId, int32 Quantity, int32 Cre
     if (*Existing == 0)
     {
         Quantities.Remove(ItemId);
+        CapacityExemptItems.Remove(ItemId);
     }
     Credits += CreditValue;
     OnInventoryChanged.Broadcast();
@@ -55,6 +70,7 @@ bool ULowTideInventoryComponent::TryRemove(FName ItemId, int32 Quantity)
     if (*Existing == 0)
     {
         Quantities.Remove(ItemId);
+        CapacityExemptItems.Remove(ItemId);
     }
     OnInventoryChanged.Broadcast();
     return true;
@@ -70,7 +86,10 @@ int32 ULowTideInventoryComponent::GetUsedCapacity() const
     int32 Total = 0;
     for (const TPair<FName, int32>& Pair : Quantities)
     {
-        Total += FMath::Max(0, Pair.Value);
+        if (!CapacityExemptItems.Contains(Pair.Key))
+        {
+            Total += FMath::Max(0, Pair.Value);
+        }
     }
     return Total;
 }

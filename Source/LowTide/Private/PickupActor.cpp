@@ -13,7 +13,9 @@ APickupActor::APickupActor()
     Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PickupMesh"));
     SetRootComponent(Mesh);
     Mesh->SetRelativeScale3D(FVector(0.35f));
-    Mesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+    Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+    Mesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
     if (MeshAsset.Succeeded())
@@ -42,6 +44,14 @@ FString APickupActor::GetInteractionPrompt(const AActor* Interactor) const
     {
         if (const FItemDefinition* Definition = GameMode->GetItemCatalog().Find(ItemId))
         {
+            if (ItemId == TEXT("signal_station_logbook"))
+            {
+                return TEXT("[E] Recover Signal Station Logbook (mission objective)");
+            }
+            if (ItemId == TEXT("singing_shard"))
+            {
+                return TEXT("[E] Take Singing Shard - movement draws the watcher; stillness and blue wards repel it");
+            }
             return FString::Printf(TEXT("[E] Collect %s"), *Definition->DisplayName);
         }
     }
@@ -67,7 +77,9 @@ bool APickupActor::Interact(AActor* Interactor)
     GameMode->BeginExpeditionIfNeeded(Character);
 
     FString Reason;
-    if (!Character->GetInventory()->TryAdd(ItemId, 1, Reason))
+    const bool bProtectedObjective = ItemId == TEXT("signal_station_logbook");
+    if (!(bProtectedObjective ? Character->GetInventory()->TryAddProtected(ItemId, 1, Reason)
+                             : Character->GetInventory()->TryAdd(ItemId, 1, Reason)))
     {
         Character->ShowFeedback(Reason);
         return false;
@@ -75,7 +87,7 @@ bool APickupActor::Interact(AActor* Interactor)
 
     bClaimed = true;
     SetActorEnableCollision(false);
-    Character->ShowFeedback(FString::Printf(TEXT("Collected %s."), *Definition->DisplayName));
+    GameMode->NotifyItemCollected(Character, ItemId);
     Destroy();
     return true;
 }

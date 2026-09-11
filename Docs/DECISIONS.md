@@ -1,5 +1,15 @@
 # Decisions — 2026-09-11
 
+## Director acceptance and M1 authorization
+
+M0.5 is Director-accepted after manual retest. Sprint, perimeter containment and core interactions pass. Tide-warning clarity is a non-blocking greybox limitation carried into M1, not grounds for further M0.5 polish.
+
+M1 extends the same production architecture into ONE authored 8–12 minute expedition. Prove discovery, meaningful loot, voluntary risk, living tide and mystery together. A comfortable main story objective precedes an optional valuable deeper branch; rising water closes a convenient route while leaving an alternate escape. Add one understandable, avoidable non-combat entity/phenomenon linked to greed. The existing recovery/expedition-salvage penalty is only a final provisional fallback.
+
+Concentrate stylized art and minimal coastal/interaction/tide/entity audio on this slice. No paid assets, realism pipeline, combat, swimming, survival meters, large catalogs, world generation, backend, broad island production or speculative save architecture. Record asset provenance. Compile, test, package, launch, inspect logs, measure the conservative renderer on the development GPU, and commit/push before Director review.
+
+Reversible working story: Mara requests a drowned signal-station logbook whose entries suggest a reply arrived before its signal was sent. A rare singing object draws a phenomenon that reacts to its carrier's movement; stopping and marked grounding refuges offer counterplay. These names, lore and tuning are implementation hypotheses, not Director-approved major canon.
+
 - Adopt the Director's brief and EUR 0 pilot limits. Establish working tools before accumulating gameplay code.
 - Select Unreal 5.6 binary release and VS 2022 17.14 C++ tooling as a stable baseline, not a claim of latest release. Pin available engine patch and compiler after installation/build verification.
 - Required: Epic Launcher, UE Win64 components, MSVC, Windows SDK 22621 or newer compatible version, engine prerequisites. Prefer bundled .NET; install a separate SDK only if required.
@@ -42,3 +52,9 @@ Production cost and hardware savings are part of the decision: reusable master m
 Classify work before substantial execution and select the cheapest capable available worker: Astra for architecture, cross-system integration, difficult Unreal debugging, risky refactors and milestone audits; Sol for substantial features, moderate debugging and Blender tooling; Terra for routine implementation, tests, UI, data, docs and refactors; Luna for discovery, boilerplate, repetitive edits, simple logs and Git. Do not delegate tiny tasks when handoff/review costs more. Bounded tasks require explicit acceptance criteria. The lead reviews shared-system changes and retains architectural authority; the Director does not coordinate workers. Canonical docs and Git remain the source of truth. EUR 0 and no Fast mode remain in force.
 
 The current collaboration tool accepts explicit model and reasoning-effort selection, verified by a successful `gpt-5.6-luna` worker invocation. Routine delegation must not silently inherit Astra; re-check capability only when the environment changes, and if selection is unavailable record the limitation and work economically without asking the Director to coordinate chats. See the [subagent configuration guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents).
+
+Model-routing update (2026-09-11): A successful explicitly selected GPT-5.3-Codex-Spark worker invocation verified availability in this environment. The Director reports a separate preview allowance; account billing was not independently inspected. For low to moderate bounded tasks (bounded code edits, input/UI/data/JSON work, tuning, and small bugfixes), use `gpt-5.3-codex-spark` unless acceptance criteria require a heavier model. Keep Astra for architecture and high-risk integration/debugging as previously defined. This is a task-level preference with no blanket model switch and no budget or Fast-mode policy change.
+
+Sources used for routing policy:
+- [Model speed configuration](https://learn.chatgpt.com/docs/agent-configuration/speed)
+- [Subagent configuration](https://learn.chatgpt.com/docs/agent-configuration/subagents)

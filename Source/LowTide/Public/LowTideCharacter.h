@@ -46,6 +46,9 @@ private:
     void SellSlot3();
     void SellSlot4();
     void SellSlot5();
+    void SellSlot6();
+    void SellSlot7();
+    void SellSlot8();
     void SellSlot(int32 Slot);
     AActor* TraceInteractable() const;
 

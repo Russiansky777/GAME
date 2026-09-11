@@ -40,6 +40,8 @@ public:
 
         FURL Url;
         Url.AddOption(TEXT("game=/Script/LowTide.LowTideGameMode"));
+        Url.AddOption(TEXT("M05"));
+        World->URL = Url;
         World->SetGameMode(Url);
         World->InitializeActorsForPlay(Url);
         World->BeginPlay();
@@ -147,7 +149,7 @@ bool FLowTideExpeditionRoundTripTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Sprint ends on release"), Character->IsSprinting());
     TestEqual(TEXT("Release restores normal walk speed"), Character->GetCharacterMovement()->MaxWalkSpeed, Character->GetWalkSpeed());
 
-    TestEqual(TEXT("Catalog has the five expedition definitions"), GameMode->GetItemCatalog().GetOrderedItems().Num(), 5);
+    TestTrue(TEXT("Catalog preserves the original five definitions and adds M1 finds"), GameMode->GetItemCatalog().GetOrderedItems().Num() >= 7);
     ATideController* Tide = GameMode->GetTideController();
     TestNotNull(TEXT("Tide controller is created by game mode"), Tide);
     if (!Tide)

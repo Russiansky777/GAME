@@ -7,6 +7,7 @@
   "Plugins": [
     { "Name": "Fab", "Enabled": false },
     { "Name": "Bridge", "Enabled": false },
-    { "Name": "AndroidFileServer", "Enabled": false }
+    { "Name": "AndroidFileServer", "Enabled": false },
+    { "Name": "PythonScriptPlugin", "Enabled": true }
   ]
 }

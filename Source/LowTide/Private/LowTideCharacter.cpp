@@ -51,6 +51,9 @@ void ALowTideCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
     PlayerInputComponent->BindAction(TEXT("Sell3"), IE_Pressed, this, &ALowTideCharacter::SellSlot3);
     PlayerInputComponent->BindAction(TEXT("Sell4"), IE_Pressed, this, &ALowTideCharacter::SellSlot4);
     PlayerInputComponent->BindAction(TEXT("Sell5"), IE_Pressed, this, &ALowTideCharacter::SellSlot5);
+    PlayerInputComponent->BindAction(TEXT("Sell6"), IE_Pressed, this, &ALowTideCharacter::SellSlot6);
+    PlayerInputComponent->BindAction(TEXT("Sell7"), IE_Pressed, this, &ALowTideCharacter::SellSlot7);
+    PlayerInputComponent->BindAction(TEXT("Sell8"), IE_Pressed, this, &ALowTideCharacter::SellSlot8);
 }
 
 void ALowTideCharacter::MoveForward(float Value)
@@ -195,3 +198,6 @@ void ALowTideCharacter::SellSlot2() { SellSlot(1); }
 void ALowTideCharacter::SellSlot3() { SellSlot(2); }
 void ALowTideCharacter::SellSlot4() { SellSlot(3); }
 void ALowTideCharacter::SellSlot5() { SellSlot(4); }
+void ALowTideCharacter::SellSlot6() { SellSlot(5); }
+void ALowTideCharacter::SellSlot7() { SellSlot(6); }
+void ALowTideCharacter::SellSlot8() { SellSlot(7); }

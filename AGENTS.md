@@ -10,9 +10,13 @@ This is the authoritative repository. Inspect status, preserve unrelated work an
 
 Reduce content before architectural quality. No speculative frameworks, combat, backend, advanced ocean, elaborate crafting or extra NPCs for M0.5. Use primitive/engine assets; record provenance for external assets.
 
+M0.5 is Director-accepted. Active M1 scope is one authored 8–12 minute stylized expedition: comfortable story objective, optional valuable risk branch, one non-combat phenomenon and tide-driven shortcut closure with alternate escape. Carry warning-readability improvements into M1. Provisional story/tuning may be authored reversibly; do not lock major lore or broaden systems. Concentrate reusable custom/stylized art and minimal audio on this slice; no further M0.5 polish.
+
 Compile, launch, inspect logs, test and package before declaring playable completion. Document actual results, bugs and next action. Use Scripts/Build.ps1 and the commands in README.md.
 
 Keep tool output and delegation economical. Classify each task before substantial work and use the cheapest capable worker: Astra for architecture, cross-system integration, difficult Unreal debugging, risky refactors and milestone audits; Sol for substantial features, moderate debugging and Blender tooling; Terra for routine implementation, tests, UI, data, docs, refactors and routine installations; Luna for discovery, boilerplate, repetitive edits, simple logs and Git. Do not default to Astra for routine delegation or installations. Do not delegate tiny tasks when handoff/review costs more. Bounded tasks require explicit acceptance criteria; the lead reviews shared-system changes and remains architecturally accountable. The Director never coordinates workers; canonical docs and Git are the source of truth. Preserve EUR 0 and no Fast mode.
+
+For bounded low/moderate code/input/UI/JSON/tuning/small-bugfix tasks, prefer GPT-5.3-Codex-Spark as the first worker. Keep Astra reserved for architecture, integration, difficult Unreal debugging, risky refactors, and milestone audits. This is a scoped worker-routing preference only (no blanket model override), and it does not alter budget caps or Fast mode policy.
 
 The Director authorizes necessary game production, builds and free tool installations without repeated confirmation. This supersedes the earlier manual-approval preference; mandatory OS/tool approval controls still apply. Keep the EUR 0 budget and no Fast mode. Before ending substantial work, update CURRENT_STATE with evidence, incomplete work, bugs and explicit next action; commit and push known-good changes to origin, verify remote contents, and leave a clean tree where practical.
 

@@ -5,16 +5,41 @@ ATideController::ATideController()
     PrimaryActorTick.bCanEverTick = true;
 }
 
-void ATideController::Configure(AActor* InWater, AActor* InCausewayBlocker)
+void ATideController::Configure(AActor* InWater, AActor* InCausewayBlocker, bool bInM05Fixture)
 {
     Water = InWater;
     CausewayBlocker = InCausewayBlocker;
+    bM05Fixture = bInM05Fixture;
+    PhaseElapsed = 0.0f;
+    if (bM05Fixture)
+    {
+        Phase = ETidePhase::Falling;
+        LowCycle = 0;
+        bClockRunning = true;
+    }
+    else
+    {
+        // The M1 expedition is already exposed, but time does not advance until Mara briefs the player.
+        Phase = ETidePhase::Low;
+        LowCycle = 1;
+        bClockRunning = false;
+    }
     ApplyState();
+}
+
+void ATideController::StartClock()
+{
+    bClockRunning = true;
 }
 
 void ATideController::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    if (!bClockRunning)
+    {
+        ApplyState();
+        return;
+    }
     PhaseElapsed += DeltaSeconds;
     while (PhaseElapsed >= GetPhaseDuration())
     {
@@ -26,13 +51,24 @@ void ATideController::Tick(float DeltaSeconds)
 
 float ATideController::GetPhaseDuration() const
 {
+    if (bM05Fixture)
+    {
+        switch (Phase)
+        {
+        case ETidePhase::Falling: return M05FallingDuration;
+        case ETidePhase::Low: return M05LowDuration;
+        case ETidePhase::Rising: return M05RisingDuration;
+        case ETidePhase::High: return M05HighDuration;
+        default: return M05LowDuration;
+        }
+    }
     switch (Phase)
     {
-    case ETidePhase::Falling: return FallingDuration;
-    case ETidePhase::Low: return LowDuration;
-    case ETidePhase::Rising: return RisingDuration;
-    case ETidePhase::High: return HighDuration;
-    default: return LowDuration;
+    case ETidePhase::Falling: return M1FallingDuration;
+    case ETidePhase::Low: return M1LowDuration;
+    case ETidePhase::Rising: return M1RisingDuration;
+    case ETidePhase::High: return M1HighDuration;
+    default: return M1LowDuration;
     }
 }
 
@@ -48,7 +84,11 @@ float ATideController::GetSecondsUntilAccessCloses() const
         return 0.0f;
     }
 
-    const float RisingOpenDuration = RisingDuration * (AccessClosingWaterZ - LowWaterZ) / (HighWaterZ - LowWaterZ);
+    const float LowDuration = bM05Fixture ? M05LowDuration : M1LowDuration;
+    const float RisingDuration = bM05Fixture ? M05RisingDuration : M1RisingDuration;
+    const float LowWaterZ = bM05Fixture ? M05LowWaterZ : M1LowWaterZ;
+    const float ClosingWaterZ = bM05Fixture ? M05AccessClosingWaterZ : M1ShortcutClosingWaterZ;
+    const float RisingOpenDuration = RisingDuration * (ClosingWaterZ - LowWaterZ) / (HighWaterZ - LowWaterZ);
     switch (Phase)
     {
     case ETidePhase::Falling: return GetSecondsRemaining() + LowDuration + RisingOpenDuration;
@@ -72,7 +112,8 @@ FString ATideController::GetPhaseName() const
 
 bool ATideController::IsClosingWarning() const
 {
-    return bAccessOpen && GetSecondsUntilAccessCloses() <= ClosingWarningDuration;
+    const float WarningDuration = bM05Fixture ? M05ClosingWarningDuration : M1ClosingWarningDuration;
+    return bAccessOpen && bClockRunning && GetSecondsUntilAccessCloses() <= WarningDuration;
 }
 
 void ATideController::AdvancePhase()
@@ -98,6 +139,10 @@ void ATideController::AdvancePhase()
 
 void ATideController::ApplyState()
 {
+    const float FallingDuration = bM05Fixture ? M05FallingDuration : M1FallingDuration;
+    const float RisingDuration = bM05Fixture ? M05RisingDuration : M1RisingDuration;
+    const float LowWaterZ = bM05Fixture ? M05LowWaterZ : M1LowWaterZ;
+    const float ClosingWaterZ = bM05Fixture ? M05AccessClosingWaterZ : M1ShortcutClosingWaterZ;
     float WaterZ = HighWaterZ;
     if (Phase == ETidePhase::Falling)
     {
@@ -118,8 +163,9 @@ void ATideController::ApplyState()
         Location.Z = WaterZ;
         Water->SetActorLocation(Location);
     }
+    CurrentWaterZ = WaterZ;
     // The water cube is 20 cm thick. Collision follows the visible surface crossing the path top.
-    const bool bNewAccessOpen = WaterZ < AccessClosingWaterZ;
+    const bool bNewAccessOpen = WaterZ < ClosingWaterZ;
     if (CausewayBlocker)
     {
         CausewayBlocker->SetActorEnableCollision(!bNewAccessOpen);

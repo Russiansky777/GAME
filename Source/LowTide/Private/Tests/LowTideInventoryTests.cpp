@@ -18,6 +18,9 @@ bool FLowTideInventoryBoundariesTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Capacity reports exact quantity"), Inventory->GetUsedCapacity(), Inventory->GetCapacity());
     TestFalse(TEXT("Full inventory rejects another item"), Inventory->TryAdd(TEXT("sea_glass"), 1, Reason));
     TestEqual(TEXT("Rejected item was not added"), Inventory->GetQuantity(TEXT("sea_glass")), 0);
+    TestTrue(TEXT("Protected mission evidence bypasses an ordinary full pack"), Inventory->TryAddProtected(TEXT("signal_station_logbook"), 1, Reason));
+    TestEqual(TEXT("Protected evidence does not consume ordinary capacity"), Inventory->GetUsedCapacity(), Inventory->GetCapacity());
+    TestTrue(TEXT("Protected evidence can be removed exactly"), Inventory->TryRemove(TEXT("signal_station_logbook"), 1));
     TestFalse(TEXT("Cannot remove more than owned"), Inventory->TryRemove(TEXT("scrap_metal"), Inventory->GetCapacity() + 1));
     TestTrue(TEXT("Exact removal succeeds"), Inventory->TryRemove(TEXT("scrap_metal"), Inventory->GetCapacity()));
     TestEqual(TEXT("Exact removal empties inventory"), Inventory->GetUsedCapacity(), 0);

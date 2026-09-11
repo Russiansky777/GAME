@@ -29,6 +29,18 @@ ATraderActor::ATraderActor()
 
 FString ATraderActor::GetInteractionPrompt(const AActor* Interactor) const
 {
+    if (const ALowTideGameMode* GameMode = GetWorld()->GetAuthGameMode<ALowTideGameMode>())
+    {
+        if (!GameMode->IsM05Fixture())
+        {
+            switch (GameMode->GetMissionState())
+            {
+            case EM1MissionState::NotAccepted: return TEXT("[E] Ask Mara about the signal station");
+            case EM1MissionState::ReturnToMara: return TEXT("[E] Give Mara the Signal Station Logbook");
+            default: break;
+            }
+        }
+    }
     return TEXT("[E] Trade with Mara");
 }
 
@@ -38,6 +50,13 @@ bool ATraderActor::Interact(AActor* Interactor)
     if (!Character || FVector::DistSquared(GetActorLocation(), Character->GetActorLocation()) > FMath::Square(475.0f))
     {
         return false;
+    }
+    if (ALowTideGameMode* GameMode = GetWorld()->GetAuthGameMode<ALowTideGameMode>())
+    {
+        if (!GameMode->IsM05Fixture())
+        {
+            return GameMode->HandleMaraInteraction(Character);
+        }
     }
     Character->OpenTrader(this);
     Character->ShowFeedback(TEXT("Mara buys salvage one piece at a time."));
@@ -81,6 +100,10 @@ bool ATraderActor::TrySellSlot(ALowTideCharacter* Character, int32 Slot) const
     {
         Character->ShowFeedback(TEXT("Sale could not be completed."));
         return false;
+    }
+    if (ALowTideGameMode* MutableGameMode = GetWorld()->GetAuthGameMode<ALowTideGameMode>())
+    {
+        MutableGameMode->NotifyItemSold(Item.Id);
     }
     Character->ShowFeedback(FString::Printf(TEXT("Sold 1 %s for %d credits."), *Item.DisplayName, Item.Value));
     return true;

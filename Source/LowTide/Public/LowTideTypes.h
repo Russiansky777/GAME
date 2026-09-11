@@ -32,3 +32,12 @@ enum class ETidePhase : uint8
     Rising,
     High
 };
+
+UENUM()
+enum class EM1MissionState : uint8
+{
+    NotAccepted,
+    FindLogbook,
+    ReturnToMara,
+    Complete
+};

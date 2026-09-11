@@ -33,5 +33,19 @@
     "description": "A marked token that may explain what happened here.",
     "value": 0,
     "sellable": false
+  },
+  {
+    "id": "signal_station_logbook",
+    "name": "Signal Station Logbook",
+    "description": "Its final entry says the station answered a distress call hours before the call was transmitted.",
+    "value": 0,
+    "sellable": false
+  },
+  {
+    "id": "singing_shard",
+    "name": "Singing Shard",
+    "description": "A rare resonant object worth 180 credits. Carrying it draws the watcher whenever you move.",
+    "value": 180,
+    "sellable": true
   }
 ]

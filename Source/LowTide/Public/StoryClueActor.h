@@ -3,19 +3,19 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "LowTideInteractable.h"
-#include "PickupActor.generated.h"
+#include "StoryClueActor.generated.h"
 
 class UStaticMeshComponent;
 
 UCLASS()
-class LOWTIDE_API APickupActor : public AActor, public ILowTideInteractable
+class LOWTIDE_API AStoryClueActor : public AActor, public ILowTideInteractable
 {
     GENERATED_BODY()
 
 public:
-    APickupActor();
-    void Configure(FName InItemId, const FLinearColor& Color);
-    FName GetItemId() const { return ItemId; }
+    AStoryClueActor();
+    virtual void BeginPlay() override;
+    void Configure(const FString& InLabel, const FString& InText);
     virtual FString GetInteractionPrompt(const AActor* Interactor) const override;
     virtual bool Interact(AActor* Interactor) override;
 
@@ -23,8 +23,6 @@ private:
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UStaticMeshComponent> Mesh;
 
-    UPROPERTY()
-    FName ItemId = NAME_None;
-
-    bool bClaimed = false;
+    FString Label;
+    FString ClueText;
 };

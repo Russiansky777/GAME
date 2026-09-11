@@ -1,20 +1,29 @@
-# M0.5 architecture
+# LOW TIDE architecture
 
-UE 5.8.2 CL56702186 Launcher binary release, one C++ game module, offline Win64. GameMode builds a fixed authored primitive layout on the engine Entry map; no world partition or external framework.
+## M1 integration boundaries
+
+M1 extends the existing character, interaction, catalog, inventory, trader, tide and HUD. `ALowTideGameMode` owns the fixed expedition session and small Mara/logbook mission state; it does not introduce a general quest framework. `ATideController` remains the sole authority for phase, water height and shortcut access. One bounded phenomenon owns artifact pursuit and grounding-refuge counterplay. `ACoastalAudio` supplies repository-authored procedural ambience and cues; HUD displays state without owning it.
+
+`ACoastalScene` builds the authored layout on the engine Entry map and exposes route and interaction anchors to GameMode. The visible coast is three static authored terrain mesh sections totaling 17,900 triangles. They have no collision. A hidden `RouteFloorCollision` instanced-cube family keeps the same established cube floor transforms and is the walkable collision surface, so visual terrain changes cannot silently alter containment or traversal. `ACoastalDressing` is non-colliding, while selected authored landmarks and huts retain collision. Authored boundary geometry and the tide shortcut blocker contain the playable space.
+
+The asset generator guards the terrain against source/layout drift: it parses and requires the 11 main, 8 alternate and 7 optional route points to match `CoastalScene.cpp`, rejects a mismatch, and checks imported terrain bounds against authored coordinates within 0.1 cm. OBJ export pre-reflects Y and reverses winding so imported terrain remains aligned with the gameplay layout.
+
+Mission reward must be idempotent. Protected evidence cannot be lost or made unobtainable by an ordinary full pack. Wet lower ground shows a warning grace period and triggers recovery after five continuous seconds; recovery removes only ordinary salvage newly acquired during that expedition while retaining prior stock, evidence, credits and permanent mission state. The next low tide can begin a second trip. Shortcut closure must retain a physically walkable elevated blue-route escape, not merely a state flag.
+
+Keep the M0.5 fixture and its regressions available while validating the default M1 layout independently. M1 automation exercises actual `CharacterMovement` walking, gravity, slopes and collision on the main, optional-risk and elevated escape routes. It does not replace a manual input, timing, listening, accessibility, performance or visual-quality review.
+
+UE 5.8.2 CL56702186 Launcher binary release, one C++ game module, offline Win64. The conservative baseline remains DX11 with conventional shadows and without Lumen, Nanite, ray tracing or an ocean plugin. No world partition, backend or external framework is required.
 
 | Boundary | Responsibility |
 | --- | --- |
 | Character/controller | First-person movement, input and focus trace |
 | Interaction interface | Prompt and validated interaction attempt |
-| Item catalog | Immutable definitions and stable IDs loaded from staged Content/Data/Items.json |
-| Inventory component | Capacity/quantity validation, add/remove and change events |
-| Pickup actor | Item ID; disappear only after successful transfer |
+| Item catalog | Immutable definitions and stable IDs loaded from staged `Content/Data/Items.json` |
+| Inventory component | Capacity/quantity validation, protected-item handling, transactions and change events |
 | Trader | Validate sale; remove quantity and credit integer currency atomically |
-| Tide controller | Single phase/time authority; drive water height and access together |
+| GameMode | Mission and phenomenon state; wet-exposure grace and stranded-player recovery |
+| Tide controller | Single phase/time authority; drive water, phase warning and shortcut access |
+| Coastal scene | Authored visual layout, route anchors, hidden route-floor collision and containment |
 | HUD | Display state and request actions, never own gameplay state |
 
-Expose acquisition, sale and tide events for later objectives; no general quest framework yet. Separate item definitions from actor instances for later saves/quests. Persistence is not an M0.5 requirement.
-
-16 GB RAM / 6 GB VRAM baseline: start DX11, conventional shadows, no Lumen/Nanite/ray tracing/ocean plugin. Provisional 1080p/30 fps target, subject to measurement. Limit concurrent compilation/shader work. Use binary engine, not source build. Blender is unnecessary for primitive greyboxing.
-
-Minimal build/package/launch gate passed at 6a8bb84. Extend these gameplay systems incrementally; current validation is recorded in CURRENT_STATE and TEST_PLAN.
+Implementation and asset details follow verified source. Package, performance and Director review evidence are tracked in CURRENT_STATE and TEST_PLAN; no M1 delivery claim follows from the Editor build or automation alone.

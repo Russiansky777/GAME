@@ -1,10 +1,15 @@
 #include "LowTideGameMode.h"
 
 #include "Components/DirectionalLightComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "CoastalAudio.h"
+#include "CoastalDressing.h"
+#include "CoastalScene.h"
+#include "HAL/FileManager.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Components/SkyAtmosphereComponent.h"
@@ -12,13 +17,22 @@
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GroundingPlinthActor.h"
 #include "LowTideCharacter.h"
 #include "LowTideHUD.h"
 #include "LowTideInventoryComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Paths.h"
+#include "Misc/Parse.h"
+#include "UnrealClient.h"
 #include "PickupActor.h"
+#include "StoryClueActor.h"
 #include "TideController.h"
+#include "TimerManager.h"
 #include "TraderActor.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "UObject/ConstructorHelpers.h"
 
 ALowTideGameMode::ALowTideGameMode()
@@ -41,7 +55,19 @@ void ALowTideGameMode::RestartPlayer(AController* NewPlayer)
     {
         return;
     }
-    RestartPlayerAtTransform(NewPlayer, FTransform(FRotator(0.0f, 0.0f, 0.0f), SafePlayerLocation));
+    const bool bReviewStart = ReviewView != EM1ReviewView::None;
+    const FRotator StartRotation = bReviewStart ? ReviewViewRotation : FRotator::ZeroRotator;
+    const FVector StartLocation = bReviewStart ? ReviewViewLocation : SafePlayerLocation;
+    RestartPlayerAtTransform(NewPlayer, FTransform(StartRotation, StartLocation));
+    if (bReviewStart)
+    {
+        if (ALowTideCharacter* Character = Cast<ALowTideCharacter>(NewPlayer->GetPawn()))
+        {
+            Character->GetCharacterMovement()->GravityScale = 0.0f;
+            Character->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+        }
+        NewPlayer->SetControlRotation(ReviewViewRotation);
+    }
 }
 
 void ALowTideGameMode::BeginPlay()
@@ -53,7 +79,15 @@ void ALowTideGameMode::BeginPlay()
         UE_LOG(LogTemp, Error, TEXT("LOW TIDE item catalog failed: %s"), *CatalogError);
     }
 
-    BuildGreybox();
+    bM05Fixture = GetWorld()->URL.HasOption(TEXT("M05")) || FParse::Param(FCommandLine::Get(), TEXT("M05"));
+    if (bM05Fixture)
+    {
+        BuildGreybox();
+    }
+    else
+    {
+        BuildM1Slice();
+    }
 }
 
 void ALowTideGameMode::Tick(float DeltaSeconds)
@@ -66,17 +100,85 @@ void ALowTideGameMode::Tick(float DeltaSeconds)
         return;
     }
 
+    if (bReviewCaptureRequested)
+    {
+        if (!bReviewCaptureDispatched)
+        {
+            ReviewCaptureSettleCountdown -= DeltaSeconds;
+            if (ReviewCaptureSettleCountdown <= 0.0f)
+            {
+                RequestReviewCaptureScreenshot();
+            }
+        }
+        else if (!bReviewCaptureCompleted)
+        {
+            ReviewCaptureFallbackSeconds += DeltaSeconds;
+            if (ReviewCaptureFallbackSeconds >= ReviewCaptureFallbackTimeoutSeconds)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("LOW TIDE review capture timeout (%0.1f sec), exiting review capture flow."), ReviewCaptureFallbackSeconds);
+                if (APlayerController* CapturePlayerController = GetWorld()->GetFirstPlayerController())
+                {
+                    CapturePlayerController->SetIgnoreLookInput(false);
+                    CapturePlayerController->SetIgnoreMoveInput(false);
+                }
+                FScreenshotRequest::OnScreenshotRequestProcessed().RemoveAll(this);
+                QueueReviewCaptureExit();
+                bReviewCaptureRequested = false;
+                bReviewCaptureCompleted = true;
+            }
+        }
+    }
+
+    if (!bM05Fixture)
+    {
+        UpdatePhenomenon(Character, DeltaSeconds);
+    }
+
     if (Character->GetActorLocation().Z < -180.0f)
     {
         RecoverStrandedPlayer();
     }
-    else if (TideController && TideController->IsAccessOpen())
+    else if (bM05Fixture && TideController && TideController->IsAccessOpen())
     {
         if (Character->GetActorLocation().X > SettlementEdgeX)
         {
             BeginExpeditionIfNeeded(Character);
         }
         else if (bExpeditionActive && Character->GetActorLocation().X <= SettlementReturnX)
+        {
+            CompleteExpedition();
+        }
+    }
+    else if (!bM05Fixture)
+    {
+        const bool bSafe = IsInSafeSettlement(Character->GetActorLocation());
+        const float FeetZ = Character->GetActorLocation().Z - Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        const bool bWetLowerGround = TideController && !bSafe
+            && TideController->GetWaterSurfaceZ() - FeetZ > 45.0f;
+        if (bWetLowerGround)
+        {
+            WetExposureSeconds += DeltaSeconds;
+            if (!bWetGroundWarningShown)
+            {
+                bWetGroundWarningShown = true;
+                Character->ShowFeedback(TEXT("Water is over your boots. Reach the elevated BLUE RIDGE now."), 6.0f);
+            }
+            if (WetExposureSeconds >= 5.0f)
+            {
+                RecoverStrandedPlayer(TEXT("Rising water overtook the lower ground"));
+                return;
+            }
+        }
+        else
+        {
+            WetExposureSeconds = 0.0f;
+            bWetGroundWarningShown = false;
+        }
+        if (!bSafe && MissionState != EM1MissionState::NotAccepted)
+        {
+            BeginExpeditionIfNeeded(Character);
+        }
+        else if (bSafe && bExpeditionActive)
         {
             CompleteExpedition();
         }
@@ -212,10 +314,379 @@ void ALowTideGameMode::BuildGreybox()
     TideController = GetWorld()->SpawnActor<ATideController>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters);
     if (TideController)
     {
-        TideController->Configure(Water, CausewayBlocker);
+        TideController->Configure(Water, CausewayBlocker, true);
         TideController->OnPhaseChanged.AddUObject(this, &ALowTideGameMode::HandleTidePhaseChanged);
         TideController->OnAccessChanged.AddUObject(this, &ALowTideGameMode::HandleAccessChanged);
     }
+}
+
+void ALowTideGameMode::BuildM1Slice()
+{
+    FActorSpawnParameters Parameters;
+    Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    CoastalScene = GetWorld()->SpawnActor<ACoastalScene>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters);
+    if (!CoastalScene)
+    {
+        CatalogError = TEXT("The authored M1 coastal scene could not be created.");
+        return;
+    }
+    CoastalScene->BuildScene();
+    SceneLayout = CoastalScene->GetLayout();
+    CoastalDressing = GetWorld()->SpawnActor<ACoastalDressing>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters);
+    if (CoastalDressing)
+    {
+        CoastalDressing->BuildDressing(SceneLayout);
+    }
+    SafePlayerLocation = SceneLayout.PlayerStart;
+    if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
+    {
+        if (ALowTideCharacter* ExistingCharacter = Cast<ALowTideCharacter>(PlayerController->GetPawn()))
+        {
+            FRotator ShoreView = SceneLayout.Mara
+                ? (SceneLayout.Mara->GetActorLocation() - SceneLayout.PlayerStart).Rotation()
+                : FRotator::ZeroRotator;
+            ShoreView.Pitch = 0.0f;
+            ShoreView.Roll = 0.0f;
+            ExistingCharacter->SetActorLocationAndRotation(SceneLayout.PlayerStart, ShoreView, false, nullptr, ETeleportType::TeleportPhysics);
+            ExistingCharacter->GetCharacterMovement()->StopMovementImmediately();
+            ExistingCharacter->GetCharacterMovement()->GravityScale = 1.0f;
+            ExistingCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+            PlayerController->SetControlRotation(ShoreView);
+        }
+    }
+
+    TideController = GetWorld()->SpawnActor<ATideController>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters);
+    if (TideController)
+    {
+        TideController->Configure(SceneLayout.WaterActor, SceneLayout.ShortcutBlocker, false);
+        TideController->OnPhaseChanged.AddUObject(this, &ALowTideGameMode::HandleTidePhaseChanged);
+        TideController->OnAccessChanged.AddUObject(this, &ALowTideGameMode::HandleAccessChanged);
+    }
+
+    CoastalAudio = GetWorld()->SpawnActor<ACoastalAudio>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters);
+    if (CoastalAudio && TideController)
+    {
+        CoastalAudio->SetTidePhase(TideController->GetPhase());
+    }
+
+    for (const FVector& WardLocation : SceneLayout.WardLocations)
+    {
+        if (AGroundingPlinthActor* Plinth = GetWorld()->SpawnActor<AGroundingPlinthActor>(WardLocation + FVector(0.0f, 0.0f, 35.0f), FRotator::ZeroRotator, Parameters))
+        {
+            GroundingPlinths.Add(Plinth);
+        }
+    }
+
+    static const TCHAR* ClueLabels[] = { TEXT("receiver slate"), TEXT("tide chart"), TEXT("wreck warning") };
+    static const TCHAR* ClueTexts[] = {
+        TEXT("RECEIVER SLATE: At 03:10 the dead station acknowledged a distress call. Its transmitter was still disconnected."),
+        TEXT("TIDE CHART: Someone circled tonight's low water and wrote, 'It gives things back when the bells sing.'"),
+        TEXT("CHALK ON THE WRECK: 'If the station answers before you call, do not answer it twice.'")
+    };
+    for (int32 Index = 0; Index < SceneLayout.RouteClueLocations.Num() && Index < UE_ARRAY_COUNT(ClueTexts); ++Index)
+    {
+        if (AStoryClueActor* Clue = GetWorld()->SpawnActor<AStoryClueActor>(SceneLayout.RouteClueLocations[Index] + FVector(0.0f, 0.0f, 70.0f), FRotator::ZeroRotator, Parameters))
+        {
+            Clue->Configure(ClueLabels[Index], ClueTexts[Index]);
+            StoryClues.Add(Clue);
+        }
+    }
+
+    if (SceneLayout.RareArtifactVisual)
+    {
+        SceneLayout.RareArtifactVisual->SetActorHiddenInGame(false);
+    }
+    if (SceneLayout.PhenomenonVisual)
+    {
+        SceneLayout.PhenomenonVisual->SetActorHiddenInGame(true);
+        SceneLayout.PhenomenonVisual->SetActorEnableCollision(false);
+    }
+
+    ApplyReviewStart();
+    BeginReviewCapture(TEXT("M1ReviewCapture"));
+    if (FParse::Param(FCommandLine::Get(), TEXT("M1ReviewRising")) && TideController)
+    {
+        TideController->StartClock();
+        TideController->Tick(300.1f);
+    }
+}
+
+void ALowTideGameMode::ApplyReviewStart()
+{
+    const EM1ReviewView RequestedView = ParseReviewViewFromCommandLine(TEXT("M1Review"));
+    if (RequestedView == EM1ReviewView::None)
+    {
+        return;
+    }
+    ApplyReviewView(RequestedView, false);
+}
+
+EM1ReviewView ALowTideGameMode::ParseReviewViewFromCommandLine(const TCHAR* CommandLineKey) const
+{
+    FString ReviewName;
+    if (!FParse::Value(FCommandLine::Get(), *FString::Printf(TEXT("-%s="), CommandLineKey), ReviewName))
+    {
+        return EM1ReviewView::None;
+    }
+    return ParseReviewViewName(ReviewName);
+}
+
+EM1ReviewView ALowTideGameMode::ParseReviewViewName(const FString& ReviewName) const
+{
+    const FString Sanitized = ReviewName.ToLower();
+    if (Sanitized == TEXT("shore"))
+    {
+        return EM1ReviewView::Shore;
+    }
+    if (Sanitized == TEXT("return"))
+    {
+        return EM1ReviewView::Return;
+    }
+    if (Sanitized == TEXT("wreck"))
+    {
+        return EM1ReviewView::Wreck;
+    }
+    if (Sanitized == TEXT("station"))
+    {
+        return EM1ReviewView::Station;
+    }
+    if (Sanitized == TEXT("shrine"))
+    {
+        return EM1ReviewView::Shrine;
+    }
+
+    return EM1ReviewView::None;
+}
+
+int32 ALowTideGameMode::GetReviewViewIndex(EM1ReviewView View) const
+{
+    switch (View)
+    {
+    case EM1ReviewView::Shore:
+        return 0;
+    case EM1ReviewView::Return:
+        return 1;
+    case EM1ReviewView::Wreck:
+        return 2;
+    case EM1ReviewView::Station:
+        return 3;
+    case EM1ReviewView::Shrine:
+        return 4;
+    default:
+        return INDEX_NONE;
+    }
+}
+
+FString ALowTideGameMode::GetReviewViewToken(EM1ReviewView View) const
+{
+    switch (View)
+    {
+    case EM1ReviewView::Shore:
+        return TEXT("shore");
+    case EM1ReviewView::Return:
+        return TEXT("return");
+    case EM1ReviewView::Wreck:
+        return TEXT("wreck");
+    case EM1ReviewView::Station:
+        return TEXT("station");
+    case EM1ReviewView::Shrine:
+        return TEXT("shrine");
+    default:
+        return TEXT("none");
+    }
+}
+
+void ALowTideGameMode::ApplyReviewView(EM1ReviewView View, bool bIgnoreInputForReviewCapture)
+{
+    const int32 RequestedIndex = GetReviewViewIndex(View);
+    if (RequestedIndex == INDEX_NONE || !SceneLayout.ReviewViews.IsValidIndex(RequestedIndex)
+        || !SceneLayout.ReviewLookAt.IsValidIndex(RequestedIndex))
+    {
+        return;
+    }
+
+    ReviewView = View;
+    ReviewViewLocation = SceneLayout.ReviewViews[RequestedIndex];
+    ReviewViewRotation = (SceneLayout.ReviewLookAt[RequestedIndex] - ReviewViewLocation).Rotation();
+    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+    if (PlayerController)
+    {
+        if (ALowTideCharacter* Character = Cast<ALowTideCharacter>(PlayerController->GetPawn()))
+        {
+            Character->SetActorLocationAndRotation(ReviewViewLocation, ReviewViewRotation, false, nullptr, ETeleportType::TeleportPhysics);
+            Character->GetCharacterMovement()->StopMovementImmediately();
+            Character->GetCharacterMovement()->GravityScale = 0.0f;
+            Character->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+        }
+        PlayerController->SetControlRotation(ReviewViewRotation);
+        PlayerController->SetIgnoreLookInput(bIgnoreInputForReviewCapture);
+        PlayerController->SetIgnoreMoveInput(bIgnoreInputForReviewCapture);
+    }
+}
+
+void ALowTideGameMode::BeginReviewCapture(const FString& CommandLineSwitch)
+{
+    const bool bCaptureSwitch = FParse::Param(FCommandLine::Get(), *CommandLineSwitch);
+    const FString CaptureSwitch = FString::Printf(TEXT("-%s="), *CommandLineSwitch);
+    FString CaptureName;
+    const bool bCaptureValueProvided = FParse::Value(FCommandLine::Get(), *CaptureSwitch, CaptureName);
+    const EM1ReviewView CaptureView = bCaptureValueProvided ? ParseReviewViewName(CaptureName) : EM1ReviewView::None;
+
+    if (!bCaptureSwitch && !bCaptureValueProvided)
+    {
+        return;
+    }
+    if (bCaptureValueProvided && CaptureView == EM1ReviewView::None)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LOW TIDE review capture ignored: invalid -%s=%s"), *CommandLineSwitch, *CaptureName);
+        return;
+    }
+    if (CaptureView != EM1ReviewView::None)
+    {
+        ApplyReviewView(CaptureView, true);
+    }
+    else if (ReviewView != EM1ReviewView::None)
+    {
+        ApplyReviewView(ReviewView, true);
+    }
+    else
+    {
+        return;
+    }
+
+    if (ReviewView != EM1ReviewView::None)
+    {
+        bReviewCaptureRequested = true;
+        bReviewCaptureCompleted = false;
+        bReviewCaptureDispatched = false;
+        ReviewCaptureSettleCountdown = ReviewCaptureSettleDelaySeconds;
+        ReviewCaptureFallbackSeconds = 0.0f;
+    }
+}
+
+void ALowTideGameMode::RequestReviewCaptureScreenshot()
+{
+    if (!bReviewCaptureRequested || bReviewCaptureDispatched)
+    {
+        return;
+    }
+
+    const FString ScreenshotDirectory = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Screenshots"), TEXT("Windows"));
+    if (!IFileManager::Get().DirectoryExists(*ScreenshotDirectory))
+    {
+        IFileManager::Get().MakeDirectory(*ScreenshotDirectory, true);
+    }
+    ReviewCaptureFilepath = FPaths::Combine(ScreenshotDirectory, FString::Printf(TEXT("M1-%s.png"), *GetReviewViewToken(ReviewView)));
+    FScreenshotRequest::OnScreenshotRequestProcessed().RemoveAll(this);
+    FScreenshotRequest::OnScreenshotRequestProcessed().AddUObject(this, &ALowTideGameMode::OnReviewCaptureScreenshotProcessed);
+    FScreenshotRequest::RequestScreenshot(ReviewCaptureFilepath, true, false);
+    bReviewCaptureDispatched = true;
+    ReviewCaptureFallbackSeconds = 0.0f;
+    UE_LOG(LogTemp, Log, TEXT("LOW TIDE review capture requested: %s"), *ReviewCaptureFilepath);
+}
+
+void ALowTideGameMode::OnReviewCaptureScreenshotProcessed()
+{
+    if (!bReviewCaptureRequested || bReviewCaptureCompleted)
+    {
+        return;
+    }
+
+    FScreenshotRequest::OnScreenshotRequestProcessed().RemoveAll(this);
+    bReviewCaptureCompleted = true;
+    bReviewCaptureDispatched = false;
+    bReviewCaptureRequested = false;
+    const FString SavedFile = ReviewCaptureFilepath.IsEmpty() ? FScreenshotRequest::GetFilename() : ReviewCaptureFilepath;
+    if (IFileManager::Get().FileExists(*SavedFile))
+    {
+        UE_LOG(LogTemp, Display, TEXT("LOW TIDE review capture saved: %s"), *SavedFile);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LOW TIDE review capture request completed but file not found yet: %s"), *SavedFile);
+    }
+    ReviewCaptureFilepath = SavedFile;
+
+    if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
+    {
+        PlayerController->SetIgnoreLookInput(false);
+        PlayerController->SetIgnoreMoveInput(false);
+    }
+    QueueReviewCaptureExit();
+}
+
+void ALowTideGameMode::QueueReviewCaptureExit()
+{
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(ReviewCaptureExitTimer);
+        GetWorld()->GetTimerManager().SetTimer(
+            ReviewCaptureExitTimer,
+            this,
+            &ALowTideGameMode::ExitGameForReviewCapture,
+            ReviewCaptureExitDelaySeconds,
+            false
+        );
+    }
+}
+
+void ALowTideGameMode::ExitGameForReviewCapture()
+{
+    if (APlayerController* PlayerController = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+    {
+        PlayerController->SetIgnoreLookInput(false);
+        PlayerController->SetIgnoreMoveInput(false);
+    }
+    UKismetSystemLibrary::QuitGame(
+        GetWorld(),
+        GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr,
+        EQuitPreference::Quit,
+        false
+    );
+}
+
+APickupActor* ALowTideGameMode::SpawnPickup(FName ItemId, const FVector& Location, const FLinearColor& Color)
+{
+    FActorSpawnParameters Parameters;
+    Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    APickupActor* Pickup = GetWorld()->SpawnActor<APickupActor>(Location, FRotator::ZeroRotator, Parameters);
+    if (Pickup)
+    {
+        Pickup->Configure(ItemId, Color);
+        ActivePickups.Add(Pickup);
+    }
+    return Pickup;
+}
+
+void ALowTideGameMode::SpawnM1Pickups()
+{
+    if (bM1PickupsSpawned)
+    {
+        return;
+    }
+    static const FName CommonIds[] = { TEXT("scrap_metal"), TEXT("copper_wire"), TEXT("sealed_tin") };
+    static const FLinearColor CommonColors[] = {
+        FLinearColor(0.34f, 0.38f, 0.40f), FLinearColor(0.72f, 0.30f, 0.12f), FLinearColor(0.55f, 0.62f, 0.50f)
+    };
+    for (int32 Index = 0; Index < SceneLayout.CommonSalvageLocations.Num(); ++Index)
+    {
+        SpawnPickup(CommonIds[Index % UE_ARRAY_COUNT(CommonIds)], SceneLayout.CommonSalvageLocations[Index],
+            CommonColors[Index % UE_ARRAY_COUNT(CommonColors)]);
+    }
+    if (MissionState == EM1MissionState::FindLogbook)
+    {
+        SpawnPickup(TEXT("signal_station_logbook"), SceneLayout.MainObjectiveLocation, FLinearColor(0.92f, 0.64f, 0.18f));
+    }
+    if (!bRareArtifactClaimed && !bRareArtifactResolved)
+    {
+        if (SceneLayout.RareArtifactVisual)
+        {
+            SceneLayout.RareArtifactVisual->SetActorHiddenInGame(false);
+        }
+        SpawnPickup(TEXT("singing_shard"), SceneLayout.RareArtifactLocation, FLinearColor(0.30f, 0.95f, 1.0f));
+    }
+    bM1PickupsSpawned = true;
 }
 
 void ALowTideGameMode::BeginExpeditionIfNeeded(const ALowTideCharacter* Character)
@@ -240,6 +711,233 @@ void ALowTideGameMode::CompleteExpedition()
 {
     bExpeditionActive = false;
     ExpeditionStartQuantities.Reset();
+}
+
+bool ALowTideGameMode::HandleMaraInteraction(ALowTideCharacter* Character)
+{
+    if (!Character || !SceneLayout.Mara
+        || FVector::DistSquared(SceneLayout.Mara->GetActorLocation(), Character->GetActorLocation()) > FMath::Square(475.0f))
+    {
+        return false;
+    }
+
+    if (CoastalAudio)
+    {
+        CoastalAudio->PlayCue(ECoastalAudioCue::Interaction);
+    }
+    if (MissionState == EM1MissionState::NotAccepted)
+    {
+        MissionState = EM1MissionState::FindLogbook;
+        BeginExpeditionIfNeeded(Character);
+        SpawnM1Pickups();
+        if (TideController)
+        {
+            TideController->StartClock();
+        }
+        Character->ShowFeedback(TEXT("Mara: Recover the signal station logbook. Low tide is stable; the blue ridge remains safe if the lower shortcut floods."), 9.0f);
+        return true;
+    }
+    if (MissionState == EM1MissionState::ReturnToMara
+        && Character->GetInventory()->GetQuantity(TEXT("signal_station_logbook")) > 0)
+    {
+        MissionState = EM1MissionState::Complete;
+        Character->GetInventory()->AddCredits(MissionRewardCredits);
+        CompleteExpedition();
+        Character->CloseMenus();
+        Character->ShowFeedback(TEXT("Mara pays 75 credits. The log says the station answered a distress signal hours before it was sent."), 12.0f);
+        return true;
+    }
+
+    Character->OpenTrader(SceneLayout.Mara);
+    Character->ShowFeedback(MissionState == EM1MissionState::FindLogbook
+        ? TEXT("Mara: Follow the amber station markers. The blue ridge is the return route. I can still buy salvage.")
+        : TEXT("Mara buys salvage one piece at a time. Keep or sell the Singing Shard; either choice is yours."), 7.0f);
+    return true;
+}
+
+void ALowTideGameMode::NotifyItemCollected(ALowTideCharacter* Character, FName ItemId)
+{
+    if (!Character)
+    {
+        return;
+    }
+    if (CoastalAudio)
+    {
+        CoastalAudio->PlayCue(ECoastalAudioCue::Interaction);
+    }
+    const FItemDefinition* Definition = ItemCatalog.Find(ItemId);
+    if (ItemId == TEXT("signal_station_logbook"))
+    {
+        if (MissionState == EM1MissionState::FindLogbook)
+        {
+            MissionState = EM1MissionState::ReturnToMara;
+        }
+        Character->ShowFeedback(TEXT("LOGBOOK: 'We answered the distress call at 03:10. At 06:40, the same call arrived for the first time.' Return to Mara."), 12.0f);
+    }
+    else if (ItemId == TEXT("singing_shard"))
+    {
+        bRareArtifactClaimed = true;
+        if (SceneLayout.RareArtifactVisual)
+        {
+            SceneLayout.RareArtifactVisual->SetActorHiddenInGame(true);
+        }
+        SetPhenomenonActive(true);
+        Character->ShowFeedback(TEXT("The Singing Shard woke the watcher. It advances only while YOU move. Stand still for relief; blue wards repel it or can take the shard."), 12.0f);
+    }
+    else
+    {
+        Character->ShowFeedback(Definition
+            ? FString::Printf(TEXT("Collected %s."), *Definition->DisplayName)
+            : TEXT("Collected salvage."));
+    }
+}
+
+void ALowTideGameMode::NotifyItemSold(FName ItemId)
+{
+    if (ItemId == TEXT("singing_shard"))
+    {
+        bRareArtifactResolved = true;
+        SetPhenomenonActive(false);
+    }
+}
+
+bool ALowTideGameMode::GroundArtifact(ALowTideCharacter* Character)
+{
+    if (!Character || Character->GetInventory()->GetQuantity(TEXT("singing_shard")) < 1)
+    {
+        if (Character)
+        {
+            Character->ShowFeedback(TEXT("The ward hums quietly. You have nothing anomalous to ground."));
+        }
+        return false;
+    }
+    if (!Character->GetInventory()->TryRemove(TEXT("singing_shard"), 1))
+    {
+        return false;
+    }
+    bRareArtifactResolved = true;
+    SetPhenomenonActive(false);
+    Character->ShowFeedback(TEXT("You relinquish the Singing Shard. The blue ward grounds its song and the watcher retreats."), 9.0f);
+    return true;
+}
+
+bool ALowTideGameMode::IsArtifactCarried() const
+{
+    const APlayerController* PlayerController = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+    const ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr;
+    return Character && Character->GetInventory()->GetQuantity(TEXT("singing_shard")) > 0;
+}
+
+void ALowTideGameMode::SetPhenomenonActive(bool bActive)
+{
+    bPhenomenonActive = bActive;
+    PhenomenonDistance = TNumericLimits<float>::Max();
+    bWatcherFarWarningShown = false;
+    bWatcherNearWarningShown = false;
+    if (SceneLayout.PhenomenonVisual)
+    {
+        if (!bActive)
+        {
+            SceneLayout.PhenomenonVisual->SetActorLocation(SceneLayout.PhenomenonStartLocation);
+        }
+        SceneLayout.PhenomenonVisual->SetActorHiddenInGame(!bActive);
+    }
+    if (CoastalAudio)
+    {
+        CoastalAudio->SetThreatIntensity(bActive ? 0.25f : 0.0f);
+        CoastalAudio->PlayCue(bActive ? ECoastalAudioCue::AnomalyAwakened : ECoastalAudioCue::AnomalyRetreat);
+    }
+}
+
+void ALowTideGameMode::UpdatePhenomenon(ALowTideCharacter* Character, float DeltaSeconds)
+{
+    AActor* Phenomenon = SceneLayout.PhenomenonVisual;
+    if (!bPhenomenonActive || !Character || !Phenomenon)
+    {
+        return;
+    }
+    if (Character->GetInventory()->GetQuantity(TEXT("singing_shard")) < 1)
+    {
+        SetPhenomenonActive(false);
+        return;
+    }
+
+    if (IsInSafeSettlement(Character->GetActorLocation()))
+    {
+        Phenomenon->SetActorHiddenInGame(true);
+        if (CoastalAudio)
+        {
+            CoastalAudio->SetThreatIntensity(0.0f);
+        }
+        return;
+    }
+    Phenomenon->SetActorHiddenInGame(false);
+
+    bool bAtWard = false;
+    for (const FVector& WardLocation : SceneLayout.WardLocations)
+    {
+        if (FVector::DistSquared2D(Character->GetActorLocation(), WardLocation) <= FMath::Square(500.0f))
+        {
+            bAtWard = true;
+            break;
+        }
+    }
+
+    FVector PhenomenonLocation = Phenomenon->GetActorLocation();
+    if (bAtWard)
+    {
+        const FVector RetreatDirection = (SceneLayout.PhenomenonStartLocation - PhenomenonLocation).GetSafeNormal();
+        PhenomenonLocation += RetreatDirection * 900.0f * DeltaSeconds;
+        Phenomenon->SetActorLocation(PhenomenonLocation);
+    }
+    else if (Character->GetVelocity().SizeSquared2D() > FMath::Square(25.0f))
+    {
+        const FVector AdvanceDirection = (Character->GetActorLocation() - PhenomenonLocation).GetSafeNormal();
+        PhenomenonLocation += AdvanceDirection * 650.0f * DeltaSeconds;
+        Phenomenon->SetActorLocation(PhenomenonLocation);
+    }
+
+    PhenomenonDistance = FVector::Dist2D(Phenomenon->GetActorLocation(), Character->GetActorLocation());
+    if (CoastalAudio)
+    {
+        CoastalAudio->SetThreatIntensity(FMath::Clamp(1.0f - PhenomenonDistance / 3000.0f, 0.12f, 1.0f));
+    }
+    if (!bWatcherFarWarningShown && PhenomenonDistance < 1500.0f)
+    {
+        bWatcherFarWarningShown = true;
+        Character->ShowFeedback(TEXT("The watcher is following your movement. Stop to freeze it, or reach a blue ward."), 7.0f);
+    }
+    if (!bWatcherNearWarningShown && PhenomenonDistance < 700.0f)
+    {
+        bWatcherNearWarningShown = true;
+        Character->ShowFeedback(TEXT("WATCHER CLOSE: stand still now, sprint for a ward, or relinquish the shard at one."), 8.0f);
+    }
+    if (!bAtWard && PhenomenonDistance < 170.0f)
+    {
+        RecoverStrandedPlayer(TEXT("The watcher caught the Singing Shard's trail"));
+    }
+}
+
+bool ALowTideGameMode::IsInSafeSettlement(const FVector& Location) const
+{
+    return bM05Fixture ? Location.X <= SettlementEdgeX : SceneLayout.SettlementSafeBounds.IsInsideOrOn(Location);
+}
+
+FString ALowTideGameMode::GetObjectiveText() const
+{
+    switch (MissionState)
+    {
+    case EM1MissionState::NotAccepted:
+        return TEXT("MISSION: Speak with Mara at the orange lookout.");
+    case EM1MissionState::FindLogbook:
+        return TEXT("MISSION: Follow amber markers to the signal station and recover its logbook.");
+    case EM1MissionState::ReturnToMara:
+        return TEXT("REVEAL: the station answered a signal before it was sent. Return the logbook to Mara.");
+    case EM1MissionState::Complete:
+        return TEXT("MISSION COMPLETE: decide whether to retain or sell any rare finds.");
+    default:
+        return FString();
+    }
 }
 
 void ALowTideGameMode::SpawnSalvageForCycle()
@@ -294,11 +992,32 @@ void ALowTideGameMode::HandleTidePhaseChanged(ETidePhase NewPhase)
 {
     if (NewPhase == ETidePhase::Low)
     {
-        SpawnSalvageForCycle();
+        if (bM05Fixture)
+        {
+            SpawnSalvageForCycle();
+        }
+        else
+        {
+            for (APickupActor* Pickup : ActivePickups)
+            {
+                if (IsValid(Pickup))
+                {
+                    Pickup->Destroy();
+                }
+            }
+            ActivePickups.Reset();
+            bM1PickupsSpawned = false;
+            if (MissionState != EM1MissionState::NotAccepted)
+            {
+                SpawnM1Pickups();
+            }
+        }
         APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
         if (ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr)
         {
-            Character->ShowFeedback(TEXT("Low tide: the causeway is open and salvage has washed onto the shelf."), 5.0f);
+            Character->ShowFeedback(bM05Fixture
+                ? TEXT("Low tide: the causeway is open and salvage has washed onto the shelf.")
+                : TEXT("Low tide: the lower trail is exposed again. The elevated blue ridge remains the reliable return."), 6.0f);
         }
     }
     else if (NewPhase == ETidePhase::Rising)
@@ -306,12 +1025,21 @@ void ALowTideGameMode::HandleTidePhaseChanged(ETidePhase NewPhase)
         APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
         if (ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr)
         {
-            Character->ShowFeedback(TEXT("The tide is rising. Return now; access closes when water covers the path."), 6.0f);
+            Character->ShowFeedback(bM05Fixture
+                ? TEXT("The tide is rising. Return now; access closes when water covers the path.")
+                : TEXT("TIDE RISING: the whitewater is climbing toward the lower shortcut. The elevated BLUE RIDGE remains open."), 8.0f);
         }
     }
     else if (NewPhase == ETidePhase::High)
     {
-        RecoverStrandedPlayer();
+        if (bM05Fixture)
+        {
+            RecoverStrandedPlayer(TEXT("Access submerged"));
+        }
+    }
+    if (CoastalAudio)
+    {
+        CoastalAudio->SetTidePhase(NewPhase);
     }
 }
 
@@ -319,6 +1047,19 @@ void ALowTideGameMode::HandleAccessChanged(bool bOpen)
 {
     if (!bOpen)
     {
+        if (!bM05Fixture)
+        {
+            if (CoastalAudio)
+            {
+                CoastalAudio->PlayCue(ECoastalAudioCue::RouteLost);
+            }
+            APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+            if (ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr)
+            {
+                Character->ShowFeedback(TEXT("LOWER CROSSING FLOODED - FOLLOW THE ELEVATED BLUE RIDGE TO SHORE."), 10.0f);
+            }
+            return;
+        }
         RecoverStrandedPlayer();
         APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
         const ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr;
@@ -329,11 +1070,11 @@ void ALowTideGameMode::HandleAccessChanged(bool bOpen)
     }
 }
 
-void ALowTideGameMode::RecoverStrandedPlayer()
+void ALowTideGameMode::RecoverStrandedPlayer(const FString& Trigger)
 {
     APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
     ALowTideCharacter* Character = PlayerController ? Cast<ALowTideCharacter>(PlayerController->GetPawn()) : nullptr;
-    if (!Character || (Character->GetActorLocation().X <= SettlementEdgeX && Character->GetActorLocation().Z >= -180.0f))
+    if (!Character || (IsInSafeSettlement(Character->GetActorLocation()) && Character->GetActorLocation().Z >= -180.0f))
     {
         return;
     }
@@ -348,6 +1089,10 @@ void ALowTideGameMode::RecoverStrandedPlayer()
             if (ExpeditionQuantity > 0 && Character->GetInventory()->TryRemove(Item.Id, ExpeditionQuantity))
             {
                 LostCount += ExpeditionQuantity;
+                if (Item.Id == TEXT("singing_shard") && !bRareArtifactResolved)
+                {
+                    bRareArtifactClaimed = false;
+                }
             }
         }
     }
@@ -355,6 +1100,7 @@ void ALowTideGameMode::RecoverStrandedPlayer()
     Character->CloseMenus();
     Character->ResetMovementAfterRecovery();
     Character->SetActorLocation(SafePlayerLocation, false, nullptr, ETeleportType::TeleportPhysics);
+    SetPhenomenonActive(false);
     CompleteExpedition();
-    Character->ShowFeedback(FString::Printf(TEXT("Access submerged. Recovered to shore: lost %d expedition salvage; evidence and credits kept."), LostCount), 7.0f);
+    Character->ShowFeedback(FString::Printf(TEXT("%s. Recovered to shore: lost %d expedition salvage; prior stock, evidence and credits kept."), *Trigger, LostCount), 9.0f);
 }

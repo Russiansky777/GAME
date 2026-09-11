@@ -10,6 +10,8 @@ Saved/
 *.vcxproj.user
 Artifacts/
 LocalTools/
+__pycache__/
+*.pyc
 *.log
 .env
 .env.*
