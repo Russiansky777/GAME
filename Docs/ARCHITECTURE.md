@@ -1,12 +1,12 @@
-# M0.5 architecture — planned, not implemented
+# M0.5 architecture
 
-UE 5.8.2 Launcher binary release, one C++ game module, offline Win64. Pin patch after installation. Small authored map, primitive geometry; no world partition or external framework.
+UE 5.8.2 CL56702186 Launcher binary release, one C++ game module, offline Win64. GameMode builds a fixed authored primitive layout on the engine Entry map; no world partition or external framework.
 
 | Boundary | Responsibility |
 | --- | --- |
 | Character/controller | First-person movement, input and focus trace |
 | Interaction interface | Prompt and validated interaction attempt |
-| Item catalog | Data-driven immutable definitions, stable IDs, CSV/DataTable import |
+| Item catalog | Immutable definitions and stable IDs loaded from staged Content/Data/Items.json |
 | Inventory component | Capacity/quantity validation, add/remove and change events |
 | Pickup actor | Item ID; disappear only after successful transfer |
 | Trader | Validate sale; remove quantity and credit integer currency atomically |
@@ -17,4 +17,4 @@ Expose acquisition, sale and tide events for later objectives; no general quest 
 
 16 GB RAM / 6 GB VRAM baseline: start DX11, conventional shadows, no Lumen/Nanite/ray tracing/ocean plugin. Provisional 1080p/30 fps target, subject to measurement. Limit concurrent compilation/shader work. Use binary engine, not source build. Blender is unnecessary for primitive greyboxing.
 
-First technical gate: minimal project compiles, packages and launches on Win64 before gameplay implementation. Extend the same systems incrementally.
+Minimal build/package/launch gate passed at 6a8bb84. Extend these gameplay systems incrementally; current validation is recorded in CURRENT_STATE and TEST_PLAN.

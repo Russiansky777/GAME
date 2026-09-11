@@ -1,6 +1,6 @@
 # M0.5 test plan
 
-Not executed: engine/project absent. Record build version, date and actual results when available; retain logs outside Git.
+Toolchain gate passed 2026-09-11 at 6a8bb84. Gameplay editor build and Scripts/Test.ps1 now pass all three tests with no test warnings: capacity/quantity boundaries, atomic sales, and an isolated-world expedition round trip. The expedition exercises CharacterMovement across the causeway and return steps, actual pickups/trader, tide closure, evidence retention and a second salvage cycle. Test-world frames/local player follow engine requirements. Report: Artifacts/Tests/index.json (generated, outside Git).
 
 1. Compile editor/game; package Win64 and launch without editor or internet. Inspect compile/cook/runtime logs.
 2. Movement/look/collision work; player cannot fall through map. Closing inventory/trader restores movement focus.
@@ -11,4 +11,4 @@ Not executed: engine/project absent. Record build version, date and actual resul
 7. Measure packaged frame times at 1080p on NVIDIA GPU; provisional 30 fps target. Record settings, pacing and memory.
 8. Supply executable path, controls and limitations for Director review. Separate subjective feedback from technical failures.
 
-Implement focused automated checks for quantity/capacity boundaries, invalid sales and tide transitions once those systems exist. Avoid tests that merely mirror implementation.
+The checks above remain the acceptance checklist, not a claim that every manual or performance scenario has been exercised. See CURRENT_STATE for packaged validation and outstanding coverage. Automated methods do not establish mouse/keyboard usability or final visual quality.

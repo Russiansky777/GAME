@@ -1,0 +1,37 @@
+[
+  {
+    "id": "scrap_metal",
+    "name": "Scrap Metal",
+    "description": "Salt-bitten plate, still useful by weight.",
+    "value": 12,
+    "sellable": true
+  },
+  {
+    "id": "copper_wire",
+    "name": "Copper Wire",
+    "description": "A dry coil stripped from old shore equipment.",
+    "value": 18,
+    "sellable": true
+  },
+  {
+    "id": "sea_glass",
+    "name": "Sea Glass",
+    "description": "Clouded blue glass polished by the tide.",
+    "value": 9,
+    "sellable": true
+  },
+  {
+    "id": "sealed_tin",
+    "name": "Sealed Supply Tin",
+    "description": "A corroded tin whose seal has somehow held.",
+    "value": 24,
+    "sellable": true
+  },
+  {
+    "id": "weathered_evidence",
+    "name": "Weathered Evidence",
+    "description": "A marked token that may explain what happened here.",
+    "value": 0,
+    "sellable": false
+  }
+]

@@ -12,3 +12,10 @@ if ($Mode -eq 'Editor') {
     & "$EngineRoot\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun "-project=$project" -noP4 -platform=Win64 -clientconfig=Development -build -cook -stage -pak -archive "-archivedirectory=$projectRoot\Artifacts\Windows" -prereqs -utf8output '-ubtargs=-MaxParallelActions=2'
 }
 if ($LASTEXITCODE -ne 0) { throw "Unreal $Mode failed with exit code $LASTEXITCODE" }
+if ($Mode -eq 'Package') {
+    $sourceCatalog = Join-Path $projectRoot 'Content/Data/Items.json'
+    $stagedCatalog = Join-Path $projectRoot 'Artifacts/Windows/LowTide/Content/Data/Items.json'
+    if (!(Test-Path $stagedCatalog) -or (Get-FileHash $sourceCatalog).Hash -ne (Get-FileHash $stagedCatalog).Hash) {
+        throw 'Packaged item catalog is missing or differs from source'
+    }
+}

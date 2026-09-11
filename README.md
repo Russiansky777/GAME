@@ -1,7 +1,8 @@
 # LOW TIDE
 
-Offline first-person island exploration game. Current implementation is the minimal
-Unreal C++ project used to verify the Windows build pipeline; gameplay is not yet implemented.
+Offline first-person island exploration game. M0.5 implements a primitive coastal
+greybox, tide access, salvage collection, inventory and one trader. The approved
+final direction is high-quality stylized 3D; these primitives test mechanics only.
 
 ## Development
 
@@ -12,12 +13,19 @@ From the repository root in PowerShell:
 
 ```powershell
 .\Scripts\Build.ps1 -Mode Editor
+.\Scripts\Test.ps1
 .\Scripts\Build.ps1 -Mode Package
 ```
 
 The script defaults to `C:\Program Files\Epic Games\UE_5.8`; override with
 `-EngineRoot` if needed. Packaged output goes to ignored `Artifacts/Windows`.
-Open `LowTide.uproject` to work in the editor. The initial Entry map is intentionally
-empty and only checks the toolchain; it is not a playable milestone.
+Open `LowTide.uproject` to work in the editor. Play starts the C++ authored greybox
+on the engine Entry map. Launch the packaged game with `Artifacts/Windows/LowTide.exe`.
+
+WASD moves, mouse looks, E interacts/closes trade, I opens/closes inventory,
+1–5 sells one matching item at Mara, Esc quits. Follow the causeway during low
+tide, collect salvage, return to the orange trader and sell. Water covering the
+path forces stranded players home and removes unsold salvage; evidence survives.
+The accelerated tide cycle repeats every two minutes. Sessions do not save yet.
 
 See `Docs/CURRENT_STATE.md` for actual validation results and next steps.

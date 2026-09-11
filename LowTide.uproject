@@ -6,6 +6,7 @@
   "Modules": [{ "Name": "LowTide", "Type": "Runtime", "LoadingPhase": "Default" }],
   "Plugins": [
     { "Name": "Fab", "Enabled": false },
-    { "Name": "Bridge", "Enabled": false }
+    { "Name": "Bridge", "Enabled": false },
+    { "Name": "AndroidFileServer", "Enabled": false }
   ]
 }

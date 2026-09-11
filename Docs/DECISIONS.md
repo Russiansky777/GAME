@@ -29,4 +29,16 @@ Use VS Community 2026 with targeted MSVC 14.50 x64/x86 and Windows SDK 26100 com
 
 Sources: [5.8.2 hotfix](https://forums.unrealengine.com/t/5-8-2-hotfix-released/2746335), [5.8 toolchain](https://dev.epicgames.com/documentation/en-us/unreal-engine/setting-up-visual-studio-development-environment-for-cplusplus-projects-in-unreal-engine), [hardware](https://dev.epicgames.com/documentation/unreal-engine/hardware-and-software-specifications-for-unreal-engine?lang=en-US), [free VS Community](https://visualstudio.microsoft.com/downloads/).
 
-Director authorized required free installations and GitHub pushes; retain manual approvals and pause at unavoidable authentication/UAC/license actions. No Fast mode or approval-setting changes.
+Director authorizes all necessary game production, required free installations and GitHub pushes without repeated confirmation. Mandatory tool/OS controls and unavoidable authentication still apply. EUR 0 budget and no Fast mode remain in force.
+
+## Director-approved stylized art direction (supersedes any realism assumption)
+
+Adopt high-quality stylized semi-cartoon first-person 3D: clean silhouettes, attractive simplified geometry, moderate detail and painterly/clean materials. Warm coastal daylight; mystery/dark fantasy during anomalous low tide. Fell & Sell / Chop Chop Inc. are production-philosophy references only, not assets/designs to copy. Commercial Steam quality is the target; technical greybox is not the art benchmark.
+
+Production cost and hardware savings are part of the decision: reusable master materials, small material families, importance-based texture/geometry budgets, restrained shaders/lights/foliage/overdraw/draw calls and economical water. Retain conservative renderer settings and lower-end GPU scalability; expensive features need demonstrated payoff. Photorealistic pipelines require explicit approval. This decision is final Director guidance, not provisional tuning.
+
+## Director-approved task routing — 2026-09-11
+
+Classify work before substantial execution and select the cheapest capable available worker: Astra for architecture, cross-system integration, difficult Unreal debugging, risky refactors and milestone audits; Sol for substantial features, moderate debugging and Blender tooling; Terra for routine implementation, tests, UI, data, docs and refactors; Luna for discovery, boilerplate, repetitive edits, simple logs and Git. Do not delegate tiny tasks when handoff/review costs more. Bounded tasks require explicit acceptance criteria. The lead reviews shared-system changes and retains architectural authority; the Director does not coordinate workers. Canonical docs and Git remain the source of truth. EUR 0 and no Fast mode remain in force.
+
+The current collaboration tool accepts explicit model and reasoning-effort selection, verified by a successful `gpt-5.6-luna` worker invocation. Routine delegation must not silently inherit Astra; re-check capability only when the environment changes, and if selection is unavailable record the limitation and work economically without asking the Director to coordinate chats. See the [subagent configuration guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents).
