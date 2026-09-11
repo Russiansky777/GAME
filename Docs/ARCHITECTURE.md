@@ -1,6 +1,6 @@
 # M0.5 architecture — planned, not implemented
 
-UE 5.6 Launcher binary release, one C++ game module, offline Win64. Pin patch after installation. Small authored map, primitive geometry; no world partition or external framework.
+UE 5.8.2 Launcher binary release, one C++ game module, offline Win64. Pin patch after installation. Small authored map, primitive geometry; no world partition or external framework.
 
 | Boundary | Responsibility |
 | --- | --- |
