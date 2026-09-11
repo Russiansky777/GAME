@@ -143,6 +143,7 @@ void ALowTideCharacter::Interact()
     if (bInventoryOpen)
     {
         bInventoryOpen = false;
+        FocusedActor.Reset();
         return;
     }
     if (AActor* Actor = FocusedActor.Get())
@@ -159,8 +160,11 @@ void ALowTideCharacter::ToggleInventory()
     if (ActiveTrader.IsValid())
     {
         CloseMenus();
+        FocusedActor.Reset();
+        return;
     }
     bInventoryOpen = !bInventoryOpen;
+    FocusedActor.Reset();
 }
 
 void ALowTideCharacter::QuitGame()
@@ -178,12 +182,14 @@ void ALowTideCharacter::OpenTrader(ATraderActor* Trader)
 {
     ActiveTrader = Trader;
     bInventoryOpen = false;
+    FocusedActor.Reset();
 }
 
 void ALowTideCharacter::CloseMenus()
 {
     ActiveTrader.Reset();
     bInventoryOpen = false;
+    FocusedActor.Reset();
 }
 
 void ALowTideCharacter::ResetMovementAfterRecovery()

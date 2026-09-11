@@ -809,7 +809,7 @@ void ALowTideGameMode::NotifyItemCollected(ALowTideCharacter* Character, FName I
             SceneLayout.RareArtifactVisual->SetActorHiddenInGame(true);
         }
         SetPhenomenonActive(true);
-        Character->ShowFeedback(TEXT("The Singing Shard woke the watcher. It advances only while YOU move. Stand still for relief; blue wards repel it or can take the shard."), 12.0f);
+        Character->ShowFeedback(TEXT("Singing Shard secured: worth 180 credits. Something reacted in the cove."), 12.0f);
     }
     else
     {
@@ -933,12 +933,12 @@ void ALowTideGameMode::UpdatePhenomenon(ALowTideCharacter* Character, float Delt
     if (!bWatcherFarWarningShown && PhenomenonDistance < 1500.0f)
     {
         bWatcherFarWarningShown = true;
-        Character->ShowFeedback(TEXT("The watcher is following your movement. Stop to freeze it, or reach a blue ward."), 7.0f);
+        Character->ShowFeedback(TEXT("Something follows the shard. Blue lights lie ahead."), 7.0f);
     }
     if (!bWatcherNearWarningShown && PhenomenonDistance < 700.0f)
     {
         bWatcherNearWarningShown = true;
-        Character->ShowFeedback(TEXT("WATCHER CLOSE: stand still now, sprint for a ward, or relinquish the shard at one."), 8.0f);
+        Character->ShowFeedback(TEXT("The presence is close. Blue lights ahead."), 8.0f);
     }
     if (!bAtWard && PhenomenonDistance < 170.0f)
     {
@@ -958,11 +958,15 @@ FString ALowTideGameMode::GetObjectiveText() const
     case EM1MissionState::NotAccepted:
         return TEXT("MISSION: Speak with Mara at the orange lookout.");
     case EM1MissionState::FindLogbook:
-        return TEXT("MISSION: Follow amber markers to the signal station and recover its logbook.");
+        return TEXT("OBJECTIVE: Follow amber markers to the signal station and recover its logbook.");
     case EM1MissionState::ReturnToMara:
-        return TEXT("REVEAL: the station answered a signal before it was sent. Return the logbook to Mara.");
+        return bRareArtifactClaimed || bRareArtifactResolved
+            ? TEXT("LOGBOOK SECURED: the station answered a signal before it was sent. Return it to Mara at the orange lookout.")
+            : TEXT("LOGBOOK SECURED: the station answered a signal before it was sent. Return it to Mara at the orange lookout. Optional: the Singing Shard is worth 180 credits.");
     case EM1MissionState::Complete:
-        return TEXT("MISSION COMPLETE: decide whether to retain or sell any rare finds.");
+        return !bRareArtifactClaimed && !bRareArtifactResolved
+            ? TEXT("MISSION COMPLETE: Mara paid 75 credits. Optional: the Singing Shard remains in the cove, worth 180 credits.")
+            : TEXT("MISSION COMPLETE: Mara paid 75 credits.");
     default:
         return FString();
     }

@@ -24,51 +24,62 @@ void ALowTideHUD::DrawHUD()
 
     const float CenterX = Canvas->SizeX * 0.5f;
     const float CenterY = Canvas->SizeY * 0.5f;
-    DrawLine(CenterX - 6.0f, CenterY, CenterX + 6.0f, CenterY, FLinearColor(0.9f, 0.95f, 1.0f, 0.9f), 1.5f);
-    DrawLine(CenterX, CenterY - 6.0f, CenterX, CenterY + 6.0f, FLinearColor(0.9f, 0.95f, 1.0f, 0.9f), 1.5f);
-
-    const float HeaderWidth = FMath::Min(660.0f, Canvas->SizeX - 48.0f);
-    const FString Objective = GameMode->IsM05Fixture() ? TEXT("Recover salvage during low tide. Return to Mara and sell it.") : GameMode->GetObjectiveText();
-    const TArray<FString> ObjectiveLines = WrapText(Objective, GEngine->GetSmallFont(), 1.0f, HeaderWidth - 32.0f);
-    const float TideY = 66.0f + ObjectiveLines.Num() * 18.0f;
-    const float HeaderHeight = TideY + (GameMode->IsM05Fixture() ? 28.0f : 50.0f) - 20.0f;
-    DrawRect(FLinearColor(0.02f, 0.06f, 0.08f, 0.82f), 24.0f, 20.0f, HeaderWidth, HeaderHeight);
-    DrawText(TEXT("LOW TIDE"), FLinearColor(0.60f, 0.90f, 0.95f), 40.0f, 31.0f, GEngine->GetLargeFont(), 0.85f, false);
-    DrawWrappedText(Objective, FLinearColor::White, 40.0f, 62.0f, HeaderWidth - 32.0f, GEngine->GetSmallFont(), 1.0f, 18.0f);
-
-    if (const ATideController* Tide = GameMode->GetTideController())
+    const bool bMenuOpen = Character->IsInventoryOpen() || Character->GetActiveTrader();
+    float HeaderBottom = 20.0f;
+    if (!bMenuOpen)
     {
-        const FString TideText = FString::Printf(TEXT("TIDE: %s   %s   |   %s %s"), *Tide->GetPhaseName(),
-            Tide->IsClockRunning() ? *FString::Printf(TEXT("%02d s"), FMath::CeilToInt(Tide->GetSecondsRemaining())) : TEXT("WAITING FOR MISSION"),
-            GameMode->IsM05Fixture() ? TEXT("ACCESS") : TEXT("LOWER SHORTCUT"), Tide->IsAccessOpen() ? TEXT("OPEN") : TEXT("CLOSED"));
-        const FLinearColor TideColor = Tide->IsClosingWarning() ? FLinearColor(1.0f, 0.35f, 0.18f) : FLinearColor(0.55f, 0.85f, 1.0f);
-        DrawWrappedText(TideText, TideColor, 40.0f, TideY, HeaderWidth - 32.0f, GEngine->GetSmallFont(), 1.05f, 18.0f);
-        if (!GameMode->IsM05Fixture())
+        DrawLine(CenterX - 6.0f, CenterY, CenterX + 6.0f, CenterY, FLinearColor(0.9f, 0.95f, 1.0f, 0.9f), 1.5f);
+        DrawLine(CenterX, CenterY - 6.0f, CenterX, CenterY + 6.0f, FLinearColor(0.9f, 0.95f, 1.0f, 0.9f), 1.5f);
+    }
+
+    if (!bMenuOpen)
+    {
+        const float HeaderWidth = FMath::Min(660.0f, Canvas->SizeX - 48.0f);
+        const FString Objective = GameMode->IsM05Fixture() ? TEXT("Recover salvage during low tide. Return to Mara and sell it.") : GameMode->GetObjectiveText();
+        const TArray<FString> ObjectiveLines = WrapText(Objective, GEngine->GetSmallFont(), 1.0f, HeaderWidth - 32.0f);
+        const float TideY = 66.0f + ObjectiveLines.Num() * 18.0f;
+        const float HeaderHeight = TideY + (GameMode->IsM05Fixture() ? 28.0f : 30.0f) - 20.0f;
+        HeaderBottom += HeaderHeight;
+        DrawRect(FLinearColor(0.02f, 0.06f, 0.08f, 0.82f), 24.0f, 20.0f, HeaderWidth, HeaderHeight);
+        DrawText(TEXT("LOW TIDE"), FLinearColor(0.60f, 0.90f, 0.95f), 40.0f, 31.0f, GEngine->GetLargeFont(), 0.85f, false);
+        DrawWrappedText(Objective, FLinearColor::White, 40.0f, 62.0f, HeaderWidth - 32.0f, GEngine->GetSmallFont(), 1.0f, 18.0f);
+
+        if (const ATideController* Tide = GameMode->GetTideController())
         {
-            DrawText(TEXT("ROUTES: lower shortcut changes with water | elevated BLUE RIDGE remains open"),
-                FLinearColor(0.35f, 0.86f, 0.96f), 40.0f, TideY + 22.0f, GEngine->GetSmallFont(), 0.82f, false);
-        }
-        if (Tide->IsClosingWarning())
-        {
-            DrawRect(FLinearColor(0.22f, 0.02f, 0.01f, 0.88f), CenterX - 330.0f, 154.0f, 660.0f, 36.0f);
-            const int32 SecondsUntilClosure = FMath::CeilToInt(Tide->GetSecondsUntilAccessCloses());
-            const FString WarningText = GameMode->IsM05Fixture()
-                ? FString::Printf(TEXT("WARNING: RETURN TO SHORE - ACCESS CLOSES IN %d s"), SecondsUntilClosure)
-                : FString::Printf(TEXT("LOWER SHORTCUT FLOODS IN %d s - BLUE RIDGE STAYS OPEN"), SecondsUntilClosure);
-            DrawText(WarningText, FLinearColor(1.0f, 0.72f, 0.25f),
-                CenterX - 310.0f, 163.0f, GEngine->GetSmallFont(), 1.0f, false);
+            FString TideText;
+            if (GameMode->IsM05Fixture())
+            {
+                TideText = FString::Printf(TEXT("TIDE: %s   %s   |   ACCESS %s"), *Tide->GetPhaseName(),
+                    Tide->IsClockRunning() ? *FString::Printf(TEXT("%02d s"), FMath::CeilToInt(Tide->GetSecondsRemaining())) : TEXT("WAITING FOR MISSION"),
+                    Tide->IsAccessOpen() ? TEXT("OPEN") : TEXT("CLOSED"));
+            }
+            else
+            {
+                switch (Tide->GetPhase())
+                {
+                case ETidePhase::Low: TideText = TEXT("TIDE: LOW — EXPLORE THE EXPOSED COVE"); break;
+                case ETidePhase::Rising: TideText = Tide->IsAccessOpen()
+                    ? TEXT("TIDE: RISING — LOWER ROUTE IS CHANGING")
+                    : TEXT("TIDE: RISING — LOWER ROUTE CLOSED / USE BLUE RIDGE"); break;
+                case ETidePhase::High: TideText = TEXT("TIDE: HIGH — BLUE RIDGE IS THE ESCAPE"); break;
+                default: TideText = TEXT("TIDE: FALLING — ROUTES WILL REOPEN"); break;
+                }
+            }
+            const FLinearColor TideColor = Tide->IsClosingWarning() ? FLinearColor(1.0f, 0.35f, 0.18f) : FLinearColor(0.55f, 0.85f, 1.0f);
+            DrawWrappedText(TideText, TideColor, 40.0f, TideY, HeaderWidth - 32.0f, GEngine->GetSmallFont(), 1.05f, 18.0f);
         }
     }
 
-    if (!GameMode->IsM05Fixture() && GameMode->IsPhenomenonActive())
+    if (const ATideController* Tide = GameMode->GetTideController(); Tide && Tide->IsClosingWarning())
     {
-        const float ThreatWidth = FMath::Min(660.0f, Canvas->SizeX - 40.0f);
-        DrawRect(FLinearColor(0.12f, 0.01f, 0.16f, 0.88f), CenterX - ThreatWidth * 0.5f, 198.0f, ThreatWidth, 66.0f);
-        DrawWrappedText(TEXT("SINGING SHARD: moving draws the watcher. Stop and it stops. Blue wards repel it or accept the shard."),
-            FLinearColor(0.60f, 0.95f, 1.0f), CenterX - ThreatWidth * 0.5f + 18.0f, 205.0f,
-            ThreatWidth - 36.0f, GEngine->GetSmallFont(), 0.82f, 17.0f);
-        DrawText(FString::Printf(TEXT("WATCHER DISTANCE: %.0f m"), GameMode->GetPhenomenonDistance() / 100.0f),
-            FLinearColor(0.95f, 0.60f, 1.0f), CenterX - ThreatWidth * 0.5f + 18.0f, 242.0f, GEngine->GetSmallFont(), 0.82f, false);
+        const float WarningY = HeaderBottom + 8.0f;
+        DrawRect(FLinearColor(0.22f, 0.02f, 0.01f, 0.88f), CenterX - 330.0f, WarningY, 660.0f, 36.0f);
+        const int32 SecondsUntilClosure = FMath::CeilToInt(Tide->GetSecondsUntilAccessCloses());
+        const FString WarningText = GameMode->IsM05Fixture()
+            ? FString::Printf(TEXT("WARNING: RETURN TO SHORE - ACCESS CLOSES IN %d s"), SecondsUntilClosure)
+            : FString::Printf(TEXT("LOWER SHORTCUT FLOODS IN %d s - BLUE RIDGE STAYS OPEN"), SecondsUntilClosure);
+        DrawText(WarningText, FLinearColor(1.0f, 0.72f, 0.25f),
+            CenterX - 310.0f, WarningY + 9.0f, GEngine->GetSmallFont(), 1.0f, false);
     }
 
     if (!GameMode->GetCatalogError().IsEmpty())
@@ -78,7 +89,7 @@ void ALowTideHUD::DrawHUD()
             38.0f, 140.0f, GEngine->GetSmallFont(), 0.95f, false);
     }
 
-    const FString Prompt = Character->GetInteractionPrompt();
+    const FString Prompt = bMenuOpen ? FString() : Character->GetInteractionPrompt();
     if (!Prompt.IsEmpty())
     {
         const float PromptWidth = FMath::Min(720.0f, Canvas->SizeX - 40.0f);
@@ -95,10 +106,10 @@ void ALowTideHUD::DrawHUD()
     DrawText(TEXT("WASD move  |  Shift sprint  |  Space jump  |  E interact  |  I inventory  |  Esc quit"),
         FLinearColor(0.72f, 0.78f, 0.80f), 32.0f, Canvas->SizeY - 30.0f, GEngine->GetSmallFont(), 0.9f, false);
 
-    if (Character->IsInventoryOpen() || Character->GetActiveTrader())
+    if (bMenuOpen)
     {
         const float PanelHeight = 95.0f + GameMode->GetItemCatalog().GetOrderedItems().Num() * 42.0f;
-        const float PanelY = FMath::Max(72.0f, FMath::Min(150.0f, Canvas->SizeY - PanelHeight - 18.0f));
+        const float PanelY = FMath::Max(72.0f, FMath::Min(150.0f, Canvas->SizeY - PanelHeight - 128.0f));
         DrawInventoryPanel(CenterX - 300.0f, PanelY, 600.0f, Character->GetActiveTrader() != nullptr);
     }
 
@@ -167,7 +178,7 @@ void ALowTideHUD::DrawInventoryPanel(float X, float Y, float Width, bool bTradin
     DrawRect(FLinearColor(0.025f, 0.055f, 0.065f, 0.96f), X, Y, Width, 95.0f + Items.Num() * 42.0f);
     DrawText(bTrading ? TEXT("MARA - SALVAGE BUYER") : TEXT("FIELD PACK"), FLinearColor(0.60f, 0.90f, 0.95f), X + 24.0f, Y + 20.0f, GEngine->GetLargeFont(), 0.8f, false);
     DrawWrappedText(bTrading ? TEXT("Press 1-8 to sell one item. E closes trade.")
-        : TEXT("Evidence survives recovery. The Singing Shard may be retained, sold, or grounded. I closes."),
+        : TEXT("Evidence is protected and not for sale. I closes."),
         FLinearColor(0.78f, 0.84f, 0.85f), X + 24.0f, Y + 55.0f, Width - 48.0f,
         GEngine->GetSmallFont(), 0.82f, 16.0f);
 
@@ -175,12 +186,13 @@ void ALowTideHUD::DrawInventoryPanel(float X, float Y, float Width, bool bTradin
     {
         const FItemDefinition& Item = Items[Index];
         const int32 Quantity = Character->GetInventory()->GetQuantity(Item.Id);
-        const FString Price = Item.bSellable ? FString::Printf(TEXT("%d credits each"), Item.Value) : TEXT("EVIDENCE - NOT FOR SALE");
+        const FString Price = Item.bSellable ? FString::Printf(TEXT("%d credits each"), Item.Value) : TEXT("PROTECTED EVIDENCE - NOT FOR SALE");
         const FString Prefix = bTrading ? FString::Printf(TEXT("[%d] "), Index + 1) : TEXT("");
         DrawText(FString::Printf(TEXT("%s%s   x%d   |   %s"), *Prefix, *Item.DisplayName, Quantity, *Price),
             Item.bSellable ? FLinearColor::White : FLinearColor(0.95f, 0.78f, 0.34f), X + 30.0f, Y + 92.0f + Index * 42.0f,
             GEngine->GetSmallFont(), 1.0f, false);
-        DrawWrappedText(Item.Description, FLinearColor(0.58f, 0.66f, 0.68f), X + 50.0f,
+        const FString Description = Item.Id == TEXT("singing_shard") ? TEXT("A rare resonant find.") : Item.Description;
+        DrawWrappedText(Description, FLinearColor(0.58f, 0.66f, 0.68f), X + 50.0f,
             Y + 112.0f + Index * 42.0f, Width - 80.0f, GEngine->GetSmallFont(), 0.68f, 13.0f);
     }
 }

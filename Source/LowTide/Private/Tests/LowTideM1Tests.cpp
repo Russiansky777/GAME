@@ -198,8 +198,12 @@ bool FLowTideM1MissionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Logbook pickup succeeds"), Collect(TestWorld.Character, Logbook));
     TestEqual(TEXT("Logbook reveals return objective"), GameMode->GetMissionState(), EM1MissionState::ReturnToMara);
     TestTrue(TEXT("Story reveal is explicit"), GameMode->GetObjectiveText().Contains(TEXT("before it was sent")));
+    TestTrue(TEXT("Return objective presents the unclaimed optional find"), GameMode->GetObjectiveText().Contains(TEXT("Optional")));
     TestTrue(TEXT("Rare artifact can be retained in the pack"), Collect(TestWorld.Character, Artifact));
     TestTrue(TEXT("Carrying rare artifact activates watcher"), GameMode->IsPhenomenonActive());
+    TestFalse(TEXT("Carried optional find is no longer offered as unclaimed"), GameMode->GetObjectiveText().Contains(TEXT("Optional")));
+    TestTrue(TEXT("Rare pickup feedback preserves value and reaction"), TestWorld.Character->GetFeedback().Contains(TEXT("180"))
+        && TestWorld.Character->GetFeedback().Contains(TEXT("reacted")));
 
     TestWorld.Character->SetActorLocation(Mara->GetActorLocation());
     const int32 CreditsBeforeReward = TestWorld.Character->GetInventory()->GetCredits();

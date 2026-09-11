@@ -50,7 +50,7 @@ FString APickupActor::GetInteractionPrompt(const AActor* Interactor) const
             }
             if (ItemId == TEXT("singing_shard"))
             {
-                return TEXT("[E] Take Singing Shard - movement draws the watcher; stillness and blue wards repel it");
+                return TEXT("[E] Take Singing Shard — rare find, worth 180 credits.");
             }
             return FString::Printf(TEXT("[E] Collect %s"), *Definition->DisplayName);
         }

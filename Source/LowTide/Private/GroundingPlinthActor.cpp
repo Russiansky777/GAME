@@ -43,7 +43,7 @@ FString AGroundingPlinthActor::GetInteractionPrompt(const AActor* Interactor) co
     const ALowTideGameMode* GameMode = GetWorld()->GetAuthGameMode<ALowTideGameMode>();
     return GameMode && GameMode->IsArtifactCarried()
         ? TEXT("[E] Ground the Singing Shard here (relinquish it)")
-        : TEXT("Grounding ward: its blue light repels the watcher");
+        : TEXT("Blue grounding ward");
 }
 
 bool AGroundingPlinthActor::Interact(AActor* Interactor)
