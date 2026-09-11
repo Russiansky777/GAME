@@ -23,3 +23,7 @@ Materials are authored only from Unreal built-in material expressions:
 - `M_LT_StylizedWater`: base color uses a slow animated two-direction world-band term from world XY + time, with `WaveScale`, `WaveSpeed`, and `WaveColorAmount` controlling broad approximately 10 m bands and restrained color amplitude.
 
 No textures, runtime plugins, paid tools, remote services, or third-party licenses are introduced. The PythonScriptPlugin remains editor-only tooling and is not a packaged-game dependency.
+
+## M1 focal landmark kit — 2026-09-11
+
+The trading-stall finish, tide-road entry posts, signal-station finish/semaphore and asymmetric shrine frame are authored in `ACoastalDressing`. They reuse Unreal engine primitives, the existing project-authored faceted rock and opaque master material with a small color family. No assets were purchased, downloaded or sourced from a marketplace; no new textures, plugins or external licence obligations are introduced. Their transforms and construction helpers remain editable project source. This pass does not change terrain assets or collision proxies.

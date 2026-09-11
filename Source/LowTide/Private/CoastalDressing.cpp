@@ -4,6 +4,7 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Math/RotationMatrix.h"
 #include "UObject/ConstructorHelpers.h"
 
 ACoastalDressing::ACoastalDressing()
@@ -15,13 +16,15 @@ ACoastalDressing::ACoastalDressing()
     CreamInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("CreamTrim"));
     TealInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("TealPaint"));
     CoralInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("CoralPaint"));
+    VioletInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MysticViolet"));
     GrassInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("GrassClumps"));
     MarketInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MarketProps"));
     BasaltInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("BasaltSkirts"));
     DistantCliffInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("DistantCliffs"));
 
     UHierarchicalInstancedStaticMeshComponent* Families[] = {
-        CreamInstances, TealInstances, CoralInstances, GrassInstances, MarketInstances, BasaltInstances, DistantCliffInstances
+        CreamInstances, TealInstances, CoralInstances, VioletInstances, GrassInstances, MarketInstances, BasaltInstances,
+        DistantCliffInstances
     };
     for (UHierarchicalInstancedStaticMeshComponent* Family : Families)
     {
@@ -66,6 +69,19 @@ void ACoastalDressing::Add(UHierarchicalInstancedStaticMeshComponent* Component,
     Component->AddInstance(FTransform(Rotation, Location, Scale));
 }
 
+void ACoastalDressing::AddBeam(UHierarchicalInstancedStaticMeshComponent* Component, const FVector& Start,
+    const FVector& End, float Thickness)
+{
+    const FVector Delta = End - Start;
+    if (Delta.IsNearlyZero())
+    {
+        return;
+    }
+    Add(Component, (Start + End) * 0.5f,
+        FVector(Thickness / 100.0f, Thickness / 100.0f, Delta.Size() / 100.0f),
+        FRotationMatrix::MakeFromZ(Delta).Rotator());
+}
+
 void ACoastalDressing::AddHutFinish(const FVector& Location, float YawDegrees, float Scale)
 {
     const FRotator Rotation(0.0f, YawDegrees, 0.0f);
@@ -98,11 +114,11 @@ void ACoastalDressing::AddMarketCluster(const FVector& Location, float YawDegree
     const FVector Forward = Rotation.RotateVector(FVector::ForwardVector);
     const FVector Side = Rotation.RotateVector(FVector::RightVector);
     // Crates, barrel stacks and a low coiled-rope motif give Mara's canopy a useful visual rhythm.
-    Add(MarketInstances, Location + Forward * 340.0f + Side * 220.0f + FVector(0.0f, 0.0f, 58.0f),
+    Add(MarketInstances, Location + Forward * 340.0f + Side * 220.0f + FVector(0.0f, 0.0f, 8.0f),
         FVector(0.78f, 0.78f, 0.58f), Rotation);
-    Add(MarketInstances, Location + Forward * 430.0f + Side * 225.0f + FVector(0.0f, 0.0f, 142.0f),
+    Add(MarketInstances, Location + Forward * 430.0f + Side * 225.0f + FVector(0.0f, 0.0f, 68.0f),
         FVector(0.62f, 0.62f, 0.62f), Rotation);
-    Add(MarketInstances, Location - Forward * 300.0f + Side * 220.0f + FVector(0.0f, 0.0f, 70.0f),
+    Add(MarketInstances, Location - Forward * 300.0f + Side * 220.0f + FVector(0.0f, 0.0f, 20.0f),
         FVector(0.58f, 0.58f, 0.70f), Rotation);
     Add(CoralInstances, Location + Forward * 60.0f - Side * 315.0f + FVector(0.0f, 0.0f, 50.0f),
         FVector(1.35f, 1.35f, 0.12f), FRotator(90.0f, YawDegrees, 0.0f));
@@ -112,6 +128,173 @@ void ACoastalDressing::AddMarketCluster(const FVector& Location, float YawDegree
         Add(TealInstances, Location + Forward * 55.0f - Side * 315.0f
                 + FVector(FMath::Cos(Angle) * 88.0f, FMath::Sin(Angle) * 88.0f, 48.0f),
             FVector(0.13f, 0.13f, 0.13f));
+    }
+
+    // Ground-to-canopy uprights correct the original floating awning silhouette.
+    for (int32 ForwardSign : {-1, 1})
+    {
+        for (int32 SideSign : {-1, 1})
+        {
+            const FVector PostBase = Location + Forward * ForwardSign * 218.0f + Side * SideSign * 150.0f;
+            AddBeam(MarketInstances, PostBase - FVector(0.0f, 0.0f, 25.0f),
+                PostBase + FVector(0.0f, 0.0f, 285.0f), 17.0f);
+        }
+    }
+
+    // A striped canvas roof, counter fascia and backed sign turn the existing canopy into a trading stall.
+    const FRotator RoofRotation(5.0f, YawDegrees, 0.0f);
+    const FVector RoofCenter(Location.X, Location.Y, 432.0f);
+    for (int32 Stripe = -3; Stripe <= 3; ++Stripe)
+    {
+        Add((Stripe % 3) == 0 ? CoralInstances : ((Stripe % 2) == 0 ? CreamInstances : TealInstances),
+            RoofCenter + RoofRotation.RotateVector(FVector(Stripe * 75.0f, 0.0f, 0.0f)),
+            FVector(0.75f, 3.85f, 0.08f), RoofRotation);
+    }
+    const FVector StartFacing = (FVector(0.0f, 0.0f, Location.Z) - Location).GetSafeNormal2D();
+    const FVector CounterSide(-StartFacing.Y, StartFacing.X, 0.0f);
+    const FRotator CounterRotation = StartFacing.Rotation();
+    const FVector CounterCenter = Location + StartFacing * 178.0f + FVector(0.0f, 0.0f, 111.0f);
+    Add(CreamInstances, CounterCenter, FVector(0.14f, 4.15f, 0.66f), CounterRotation);
+    for (int32 Slat = -3; Slat <= 3; ++Slat)
+    {
+        Add(Slat % 2 == 0 ? CoralInstances : TealInstances,
+            CounterCenter + StartFacing * 9.0f + CounterSide * Slat * 56.0f,
+            FVector(0.08f, 0.42f, 0.48f), CounterRotation);
+    }
+
+    const FVector SignCenter = Location + Forward * 260.0f + Side * 282.0f + FVector(0.0f, 0.0f, 305.0f);
+    const FVector SignFacing = (FVector(0.0f, 0.0f, SignCenter.Z) - SignCenter).GetSafeNormal2D();
+    const FVector SignSide(-SignFacing.Y, SignFacing.X, 0.0f);
+    const FRotator SignRotation = SignFacing.Rotation();
+    Add(CreamInstances, SignCenter, FVector(0.18f, 2.55f, 1.35f), SignRotation);
+    Add(CoralInstances, SignCenter + SignFacing * 20.0f, FVector(0.07f, 0.82f, 0.16f),
+        FRotator(0.0f, SignRotation.Yaw, -18.0f));
+    Add(TealInstances, SignCenter + SignFacing * 21.0f + FVector(0.0f, 0.0f, 35.0f),
+        FVector(0.07f, 0.30f, 0.30f), SignRotation);
+    for (int32 SignPost : {-1, 1})
+    {
+        const FVector PostTop = SignCenter + SignSide * SignPost * 165.0f - FVector(0.0f, 0.0f, 62.0f);
+        AddBeam(MarketInstances, FVector(PostTop.X, PostTop.Y, 128.0f), PostTop, 12.0f);
+    }
+
+    const FVector PennantBase = Location + Forward * 500.0f + Side * 265.0f - FVector(0.0f, 0.0f, 25.0f);
+    AddBeam(MarketInstances, PennantBase, PennantBase + FVector(0.0f, 0.0f, 690.0f), 16.0f);
+    Add(CoralInstances, PennantBase + FVector(0.0f, 0.0f, 610.0f), FVector(0.12f, 1.15f, 0.42f),
+        FRotator(0.0f, YawDegrees + 8.0f, -10.0f));
+}
+
+void ACoastalDressing::AddRouteEntrance(const FCoastalSceneLayout& Layout)
+{
+    if (Layout.RouteWaypoints.Num() < 3)
+    {
+        return;
+    }
+    const FVector GateCenter(2760.0f, -2110.0f, 120.0f);
+    const FVector Direction = (Layout.RouteWaypoints[2] - Layout.RouteWaypoints[1]).GetSafeNormal2D();
+    const FVector Side(-Direction.Y, Direction.X, 0.0f);
+    const FVector LeftBase = GateCenter + Side * 650.0f;
+    const FVector RightBase = GateCenter - Side * 650.0f;
+    AddBeam(MarketInstances, LeftBase, LeftBase + FVector(0.0f, 0.0f, 520.0f), 20.0f);
+    AddBeam(MarketInstances, RightBase, RightBase + FVector(0.0f, 0.0f, 520.0f), 20.0f);
+    AddBeam(MarketInstances, LeftBase + FVector(0.0f, 0.0f, 500.0f),
+        RightBase + FVector(0.0f, 0.0f, 500.0f), 17.0f);
+    for (int32 SideSign : {-1, 1})
+    {
+        const FVector Banner = GateCenter + Side * SideSign * 625.0f + Direction * 35.0f + FVector(0.0f, 0.0f, 395.0f);
+        Add(SideSign < 0 ? TealInstances : CoralInstances, Banner, FVector(0.08f, 0.62f, 0.76f),
+            FRotator(0.0f, Direction.Rotation().Yaw, SideSign * 7.0f));
+    }
+    // Repeated compact markers establish a deliberate low-tide road without occupying the walk lane.
+    for (int32 Marker = 0; Marker < 4; ++Marker)
+    {
+        const float Alpha = 0.18f + Marker * 0.19f;
+        const FVector Center = FMath::Lerp(Layout.RouteWaypoints[1], Layout.RouteWaypoints[2], Alpha);
+        const FVector MarkerBase = Center + Side * (Marker % 2 == 0 ? 610.0f : -610.0f);
+        AddBeam(MarketInstances, MarkerBase, MarkerBase + FVector(0.0f, 0.0f, 245.0f), 12.0f);
+        Add(Marker % 2 == 0 ? CoralInstances : TealInstances, MarkerBase + FVector(0.0f, 0.0f, 225.0f),
+            FVector(0.22f, 0.22f, 0.22f));
+    }
+}
+
+void ACoastalDressing::AddSignalStationHero(const FCoastalSceneLayout& Layout)
+{
+    const FVector Location = Layout.RouteWaypoints.Last() + FVector(900.0f, 900.0f, 20.0f);
+    const FRotator StationRotation(0.0f, 22.0f, 0.0f);
+    const FVector Back = StationRotation.RotateVector(FVector::ForwardVector);
+    const FVector Side = StationRotation.RotateVector(FVector::RightVector);
+
+    // Three-sided signal room: the front and central desk sightline remain completely open.
+    Add(CreamInstances, Location + Back * 330.0f + FVector(0.0f, 0.0f, 620.0f),
+        FVector(0.18f, 5.6f, 7.9f), StationRotation);
+    Add(TealInstances, Location + Back * 340.0f + FVector(0.0f, 0.0f, 275.0f),
+        FVector(0.10f, 5.72f, 1.0f), StationRotation);
+    for (int32 SideSign : {-1, 1})
+    {
+        const FVector WallCenter = Location + Side * SideSign * 270.0f + Back * 115.0f + FVector(0.0f, 0.0f, 620.0f);
+        Add(CreamInstances, WallCenter, FVector(4.3f, 0.18f, 7.9f), StationRotation);
+        Add(TealInstances, WallCenter - Back * 12.0f + FVector(0.0f, 0.0f, -340.0f),
+            FVector(4.42f, 0.10f, 1.0f), StationRotation);
+        Add(CoralInstances, Location + Side * SideSign * 282.0f - Back * 105.0f + FVector(0.0f, 0.0f, 610.0f),
+            FVector(0.12f, 1.05f, 1.35f), StationRotation);
+    }
+    for (int32 Brace = -2; Brace <= 2; ++Brace)
+    {
+        Add(MarketInstances, Location + Back * 470.0f + Side * Brace * 145.0f + FVector(0.0f, 0.0f, 530.0f),
+            FVector(0.11f, 0.11f, 6.25f), FRotator::ZeroRotator);
+    }
+
+    // Tiered crown and offset semaphore make the objective readable from the opening route.
+    Add(TealInstances, Location + FVector(0.0f, 0.0f, 1140.0f), FVector(3.4f, 3.4f, 0.34f), StationRotation);
+    Add(CreamInstances, Location + FVector(0.0f, 0.0f, 1225.0f), FVector(2.35f, 2.35f, 1.35f), StationRotation);
+    Add(CoralInstances, Location + FVector(0.0f, 0.0f, 1302.0f), FVector(2.65f, 2.65f, 0.18f), StationRotation);
+    const FVector MastBase = Location + FVector(0.0f, 0.0f, 1302.0f);
+    AddBeam(MarketInstances, MastBase, MastBase + FVector(0.0f, 0.0f, 920.0f), 24.0f);
+    AddBeam(MarketInstances, MastBase + FVector(0.0f, 0.0f, 550.0f) - Side * 390.0f,
+        MastBase + FVector(0.0f, 0.0f, 550.0f) + Side * 390.0f, 15.0f);
+    AddBeam(CoralInstances, MastBase + FVector(0.0f, 0.0f, 735.0f),
+        MastBase + Back * 510.0f + FVector(0.0f, 0.0f, 930.0f), 13.0f);
+    Add(CoralInstances, MastBase + Back * 425.0f + FVector(0.0f, 0.0f, 900.0f),
+        FVector(0.10f, 1.05f, 0.48f), FRotator(0.0f, StationRotation.Yaw, 12.0f));
+    Add(TealInstances, MastBase - Side * 265.0f + FVector(0.0f, 0.0f, 490.0f),
+        FVector(0.10f, 0.72f, 0.38f), StationRotation);
+}
+
+void ACoastalDressing::AddShrineHero(const FCoastalSceneLayout& Layout)
+{
+    const FVector Pickup = Layout.RareArtifactLocation;
+    const FVector Approach = (Layout.OptionalRouteWaypoints[Layout.OptionalRouteWaypoints.Num() - 2] - Pickup).GetSafeNormal2D();
+    const FVector Back = -Approach;
+    const FVector Side(-Approach.Y, Approach.X, 0.0f);
+    const FVector ArchCenter = Pickup + Back * 510.0f;
+
+    // An asymmetric broken arch cradles the real artifact from behind and keeps the approach/pickup clear.
+    Add(BasaltInstances, ArchCenter + Side * 390.0f + FVector(0.0f, 0.0f, 260.0f),
+        FVector(2.6f, 2.1f, 7.2f), FRotator(-8.0f, Approach.Rotation().Yaw + 12.0f, -10.0f));
+    Add(BasaltInstances, ArchCenter - Side * 420.0f + FVector(0.0f, 0.0f, 205.0f),
+        FVector(2.2f, 1.8f, 5.7f), FRotator(13.0f, Approach.Rotation().Yaw - 18.0f, 9.0f));
+    const FVector LeftFoot = ArchCenter + Side * 345.0f;
+    const FVector RightFoot = ArchCenter - Side * 305.0f;
+    const FVector LeftTop = LeftFoot + FVector(0.0f, 0.0f, 610.0f);
+    const FVector Crown = ArchCenter - Side * 95.0f + Back * 35.0f + FVector(0.0f, 0.0f, 735.0f);
+    const FVector RightTop = RightFoot + FVector(0.0f, 0.0f, 545.0f);
+    AddBeam(VioletInstances, LeftFoot, LeftTop, 72.0f);
+    AddBeam(VioletInstances, RightFoot, RightTop, 64.0f);
+    AddBeam(VioletInstances, LeftTop, Crown, 82.0f);
+    AddBeam(VioletInstances, Crown, RightTop, 70.0f);
+    Add(BasaltInstances, ArchCenter - Side * 500.0f + Back * 35.0f + FVector(0.0f, 0.0f, 570.0f),
+        FVector(1.35f, 1.15f, 2.5f), FRotator(24.0f, Approach.Rotation().Yaw, 18.0f));
+
+    // Low steps focus the approach while inset color belongs to the architecture, not a second collectible.
+    for (int32 Step = 0; Step < 3; ++Step)
+    {
+        Add(BasaltInstances, Pickup + Back * (100.0f + Step * 75.0f) + FVector(0.0f, 0.0f, -58.0f + Step * 15.0f),
+            FVector(4.2f - Step * 0.55f, 3.4f - Step * 0.45f, 0.70f), Approach.Rotation());
+    }
+    for (int32 Rune = -2; Rune <= 2; ++Rune)
+    {
+        Add(Rune % 2 == 0 ? TealInstances : VioletInstances,
+            Pickup + Side * Rune * 120.0f + Back * 260.0f + FVector(0.0f, 0.0f, -12.0f),
+            FVector(0.45f, 0.12f, 0.06f), FRotator(0.0f, Approach.Rotation().Yaw, Rune * 18.0f));
     }
 }
 
@@ -148,6 +331,7 @@ void ACoastalDressing::BuildDressing(const FCoastalSceneLayout& Layout)
     ConfigureFamily(CreamInstances, CubeMesh, FLinearColor(0.88f, 0.76f, 0.55f), 0.78f);
     ConfigureFamily(TealInstances, CubeMesh, FLinearColor(0.055f, 0.38f, 0.39f), 0.72f);
     ConfigureFamily(CoralInstances, CubeMesh, FLinearColor(0.78f, 0.25f, 0.17f), 0.76f);
+    ConfigureFamily(VioletInstances, CubeMesh, FLinearColor(0.12f, 0.085f, 0.19f), 0.80f);
     ConfigureFamily(GrassInstances, ConeMesh, FLinearColor(0.20f, 0.42f, 0.25f), 0.92f);
     ConfigureFamily(MarketInstances, CylinderMesh, FLinearColor(0.38f, 0.20f, 0.09f), 0.86f);
     ConfigureFamily(BasaltInstances, FacetedRockMesh, FLinearColor(0.12f, 0.16f, 0.18f), 0.96f);
@@ -157,6 +341,9 @@ void ACoastalDressing::BuildDressing(const FCoastalSceneLayout& Layout)
     AddHutFinish(FVector(1250.0f, -2100.0f, 145.0f), -20.0f, 0.82f);
     AddHutFinish(FVector(-1550.0f, 900.0f, 155.0f), 125.0f, 0.75f);
     AddMarketCluster(FVector(900.0f, -700.0f, 150.0f), 10.0f);
+    AddRouteEntrance(Layout);
+    AddSignalStationHero(Layout);
+    AddShrineHero(Layout);
 
     AddBasaltSkirt(FVector(-2350.0f, -2450.0f, 20.0f), FVector(650.0f, 520.0f, 0.0f), 113);
     AddBasaltSkirt(FVector(2350.0f, 2450.0f, 20.0f), FVector(420.0f, 300.0f, 0.0f), 197);
@@ -177,6 +364,7 @@ void ACoastalDressing::BuildDressing(const FCoastalSceneLayout& Layout)
 
     UE_LOG(LogTemp, Display, TEXT("LOW TIDE M1 visual dressing built: %d non-colliding instances."),
         CreamInstances->GetInstanceCount() + TealInstances->GetInstanceCount() + CoralInstances->GetInstanceCount()
-            + GrassInstances->GetInstanceCount() + MarketInstances->GetInstanceCount() + BasaltInstances->GetInstanceCount()
+            + VioletInstances->GetInstanceCount() + GrassInstances->GetInstanceCount() + MarketInstances->GetInstanceCount()
+            + BasaltInstances->GetInstanceCount()
             + DistantCliffInstances->GetInstanceCount());
 }

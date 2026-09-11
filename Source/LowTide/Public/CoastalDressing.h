@@ -31,6 +31,11 @@ private:
         const FVector& Scale, const FRotator& Rotation = FRotator::ZeroRotator);
     void AddHutFinish(const FVector& Location, float YawDegrees, float Scale);
     void AddMarketCluster(const FVector& Location, float YawDegrees);
+    void AddRouteEntrance(const FCoastalSceneLayout& Layout);
+    void AddSignalStationHero(const FCoastalSceneLayout& Layout);
+    void AddShrineHero(const FCoastalSceneLayout& Layout);
+    void AddBeam(UHierarchicalInstancedStaticMeshComponent* Component, const FVector& Start,
+        const FVector& End, float Thickness);
     void AddBasaltSkirt(const FVector& Center, const FVector& Extent, int32 Seed);
     void AddGrassClump(const FVector& Location, float Scale, float YawDegrees);
 
@@ -45,6 +50,9 @@ private:
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UHierarchicalInstancedStaticMeshComponent> CoralInstances;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> VioletInstances;
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UHierarchicalInstancedStaticMeshComponent> GrassInstances;
