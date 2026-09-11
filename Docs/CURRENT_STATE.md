@@ -29,14 +29,14 @@ Discovery: PATH, Program Files, Epic manifest, Unreal user registration, uninsta
 ## Setup progress / blockers
 - Selected UE 5.8.2 after explicit comparison; see DECISIONS. No identified reason to retain 5.6. Rendering profile remains conservative; performance unmeasured.
 - Epic MSI signature valid (Epic Games Inc.), installation exit 0. Launcher at C:\Program Files\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe.
-- Launcher self-update completed; log reports SignedIn=0, NotLoggedIn and SignInRouter navigation complete. Paused for Director to sign in. Do not automate authentication.
-- Microsoft-signed VS Community 2026 bootstrapper downloaded to ignored LocalTools/vs_community.exe. Requested only Microsoft.VisualStudio.Component.VC.14.50.18.0.x86.x64 and Microsoft.VisualStudio.Component.Windows11SDK.26100 plus required dependencies. First attempt exit 1618: AnotherInstallationRunning. Do not claim compiler installation success.
+- Director confirmed sign-in; signed-in Launcher UI verified. Unreal Library selector currently offers 5.8.0, not 5.8.2. Selected the 5.8 line and opened Install; now paused at Unreal pricing/license acceptance dialog (yellow Принять button). Director must review/accept. No engine download started. Verify actual patch/update availability before claiming 5.8.2 installed.
+- Microsoft-signed VS Community 2026 bootstrapper downloaded to ignored LocalTools/vs_community.exe. Requested only Microsoft.VisualStudio.Component.VC.14.50.18.0.x86.x64 and Microsoft.VisualStudio.Component.Windows11SDK.26100 plus required dependencies. First attempt exit 1618: AnotherInstallationRunning. Retry started after Epic installation ended and was still running at the license pause (exec session 23155). MSVC folders 14.50.35717 and 14.51.36231 now exist, but compiler/SDK verification remains pending. Do not equate folders with successful installation.
 - MSI log: LocalTools/Epic-install.log. VS logs: %TEMP%/dd_setup_20260911020215.log and *_errors.log. Epic logs: %LOCALAPPDATA%/EpicGamesLauncher/Saved/Logs/.
 - Windows UI control could not inspect msiexec.exe (product policy block). Epic startup snapshots subsequently failed with 'foreground window did not report a process id'; refreshed window selection also failed during updater. Use fresh window selection after sign-in; never reuse old handles/coordinates or automate around a policy block.
 - No .uproject, gameplay implementation, engine launch, compile, packaging or performance result. No game bugs assessed. Setup is incomplete.
 
-## Explicit next action after Director confirms Epic sign-in
-1. Refresh launcher state. Install UE 5.8.2 with Windows core components only; inspect footprint, omit debug symbols/samples/mobile/console platforms. Pause at any unavoidable license/UAC prompt.
-2. Confirm other installers have finished, then retry the signed VS bootstrapper with the same two component IDs. No broad optional workloads. Verify actual MSVC/SDK versions and UnrealBuildTool discovery.
+## Explicit next action after Director accepts Epic license
+1. Refresh launcher state after license acceptance. Inspect 5.8 installation options/manifest and available update to resolve 5.8.0 UI versus requested 5.8.2. Use Windows core components only; inspect footprint, omit debug symbols/samples/mobile/console platforms. Pause at any further unavoidable license/UAC prompt.
+2. Check existing VS installer completion/logs before retrying anything. Verify installed components and actual MSVC/SDK versions; later verify UnrealBuildTool discovery. No broad optional workloads.
 3. Create minimal project in this repository, compile, launch Unreal, inspect logs and package/launch Win64 before major M0.5 implementation.
 4. Implement M0.5 gates, keeping CURRENT_STATE current and committing/pushing known-good checkpoints. No Fast mode or automatic-approval changes. No purchases.
