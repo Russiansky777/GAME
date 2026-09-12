@@ -17,3 +17,13 @@ __pycache__/
 .env
 .env.*
 !.env.example
+# Preserved local Meshy alternatives and superseded Interchange import outputs.
+SourceAssets/Generated/JobBoard/Meshy_AI_coastal_mission_board_0912012131_image-to-3d-texture.glb
+Content/Generated/HeroJobBoard/SM_JobBoard_Hero.uasset
+Content/Generated/HeroJobBoard/SM_JobBoard_Hero_ReplaceTemp.uasset
+Content/Generated/HeroJobBoard/Materials/M_JobBoard_Hero.uasset
+Content/Generated/HeroJobBoard/SM_JobBoard_Hero_import/Materials/
+Content/Generated/HeroJobBoard/SM_JobBoard_Hero_motion/Materials/BakedMaterial.uasset
+Content/Generated/HeroJobBoard/SM_JobBoard_Hero_motion/Textures/
+Content/Generated/HeroJobBoard/SM_JobBoard_Hero_motion/Materials/M_JobBoard_PaperMotion.uasset
+SourceAssets/Generated/JobBoard/Inspection/

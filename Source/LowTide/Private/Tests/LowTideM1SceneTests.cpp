@@ -6,6 +6,7 @@
 #include "HubDressingActor.h"
 #include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -233,13 +234,164 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
     TestNotNull(TEXT("Mission board is spawned as a separate hub interaction"), GameMode->GetJobBoard());
     if (AJobBoardActor* Board = GameMode->GetJobBoard())
     {
-        const UStaticMeshComponent* BoardMesh = Board->FindComponentByClass<UStaticMeshComponent>();
-        TestTrue(TEXT("Mission board loads its authored hero mesh"), BoardMesh && BoardMesh->GetStaticMesh());
-        TestTrue(TEXT("Mission board owns physical interaction backing"),
-            Board->FindComponentByClass<UBoxComponent>() != nullptr);
+        TInlineComponentArray<UStaticMeshComponent*> BoardMeshes(Board);
+        const UStaticMeshComponent* BoardMesh = nullptr;
+        int32 AnimatedBoardPieces = 0;
+        int32 AnimatedPapers = 0;
+        const UStaticMeshComponent* AnimatedLantern = nullptr;
+        const UStaticMeshComponent* PaperA = nullptr;
+        const UStaticMeshComponent* PaperB = nullptr;
+        for (const UStaticMeshComponent* Mesh : BoardMeshes)
+        {
+            if (!Mesh)
+            {
+                continue;
+            }
+            if (Mesh->ComponentTags.Contains(TEXT("JobBoardHeroMesh")))
+            {
+                BoardMesh = Mesh;
+            }
+            if (Mesh->ComponentTags.Contains(TEXT("JobBoardAnimatedLantern")))
+            {
+                AnimatedLantern = Mesh;
+                ++AnimatedBoardPieces;
+                TestEqual(TEXT("Animated lantern is movable"), Mesh->Mobility, EComponentMobility::Movable);
+                TestFalse(TEXT("Animated lantern cannot generate overlap work"), Mesh->GetGenerateOverlapEvents());
+            }
+            if (Mesh->ComponentTags.Contains(TEXT("JobBoardAnimatedPaper")))
+            {
+                ++AnimatedBoardPieces;
+                ++AnimatedPapers;
+                TestEqual(TEXT("Animated paper is movable"), Mesh->Mobility, EComponentMobility::Movable);
+                TestFalse(TEXT("Animated paper cannot generate overlap work"), Mesh->GetGenerateOverlapEvents());
+                if (Mesh->GetFName() == TEXT("JobBoardPaperAMesh"))
+                {
+                    PaperA = Mesh;
+                }
+                else if (Mesh->GetFName() == TEXT("JobBoardPaperBMesh"))
+                {
+                    PaperB = Mesh;
+                }
+            }
+            TestEqual(TEXT("Hero board visual and animated decorations stay collision-free"),
+                Mesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            TestNotNull(TEXT("Hero board assembly mesh is available for cooking"), Mesh->GetStaticMesh().Get());
+        }
+        TestNotNull(TEXT("Mission board loads its authored static hero body"), BoardMesh);
+        if (BoardMesh && BoardMesh->GetStaticMesh())
+        {
+            const FVector HeroBoardSize = BoardMesh->GetStaticMesh()->GetBoundingBox().GetSize();
+            TestTrue(TEXT("Hero board main assembly preserves its 180 cm width and 210 cm height"),
+                FMath::IsNearlyEqual(HeroBoardSize.Y, 180.0f, 1.0f)
+                && FMath::IsNearlyEqual(HeroBoardSize.Z, 210.0f, 1.0f));
+        }
+        TestEqual(TEXT("Mission board assembles one lantern and two pinned paper decorations"), AnimatedBoardPieces, 3);
+        TestEqual(TEXT("Mission board assembles two independent paper decorations"), AnimatedPapers, 2);
+        TestTrue(TEXT("Job board motion updates at no more than 30 Hz"), Board->PrimaryActorTick.TickInterval >= (1.0f / 30.0f));
+        if (AnimatedLantern)
+        {
+            const USceneComponent* LanternAnchor = AnimatedLantern->GetAttachParent();
+            TestNotNull(TEXT("Separated lantern has a dedicated animation anchor"), LanternAnchor);
+            if (LanternAnchor)
+            {
+                TestTrue(TEXT("Lantern anchor uses the reviewed Interchange-flipped Y pivot"),
+                    FMath::IsNearlyEqual(LanternAnchor->GetRelativeLocation().Y, 74.1814f, 0.1f));
+                TestTrue(TEXT("Lantern baked board-space mesh is cancelled back to the board origin"),
+                    (LanternAnchor->GetRelativeLocation() + AnimatedLantern->GetRelativeLocation()).IsNearlyZero(0.1f));
+            }
+        }
+        TestNotNull(TEXT("Hero board has the upper pinned paper component"), PaperA);
+        TestNotNull(TEXT("Hero board has the lower pinned paper component"), PaperB);
+        if (PaperA && PaperB)
+        {
+            const USceneComponent* PaperAAnchor = PaperA->GetAttachParent();
+            const USceneComponent* PaperBAnchor = PaperB->GetAttachParent();
+            TestNotNull(TEXT("Upper paper has its own pinned-edge anchor"), PaperAAnchor);
+            TestNotNull(TEXT("Lower paper has its own pinned-edge anchor"), PaperBAnchor);
+            if (PaperAAnchor && PaperBAnchor)
+            {
+                TestTrue(TEXT("Paper anchors use the reviewed Interchange-flipped Y pivots"),
+                    FMath::IsNearlyEqual(PaperAAnchor->GetRelativeLocation().Y, 12.0f, 0.1f)
+                    && FMath::IsNearlyEqual(PaperBAnchor->GetRelativeLocation().Y, -20.0f, 0.1f));
+                TestTrue(TEXT("Paper meshes cancel their baked board-space offsets"),
+                    (PaperAAnchor->GetRelativeLocation() + PaperA->GetRelativeLocation()).IsNearlyZero(0.1f)
+                    && (PaperBAnchor->GetRelativeLocation() + PaperB->GetRelativeLocation()).IsNearlyZero(0.1f));
+            }
+        }
+        if (AnimatedLantern)
+        {
+            Board->ApplyLivelinessPoseForTesting(0.0f);
+            const FRotator FirstPose = AnimatedLantern->GetAttachParent()->GetRelativeRotation();
+            Board->ApplyLivelinessPoseForTesting(0.7f);
+            TestFalse(TEXT("Subtle board liveliness changes the separated lantern transform"),
+                AnimatedLantern->GetAttachParent()->GetRelativeRotation().Equals(FirstPose, 0.01f));
+        }
+
+        TInlineComponentArray<UBoxComponent*> BoardBoxes(Board);
+        int32 StructuralBoardBoxes = 0;
+        int32 InteractionBoardBoxes = 0;
+        for (const UBoxComponent* Box : BoardBoxes)
+        {
+            if (!Box)
+            {
+                continue;
+            }
+            if (Box->ComponentTags.Contains(TEXT("JobBoardStructuralCollision")))
+            {
+                ++StructuralBoardBoxes;
+                TestEqual(TEXT("Hero board structural pieces block traversal"),
+                    Box->GetCollisionEnabled(), ECollisionEnabled::QueryAndPhysics);
+                TestTrue(TEXT("Hero board structural pieces remain tighter than the authored full mesh bounds"),
+                    Box->GetScaledBoxExtent().X <= 13.0f && Box->GetScaledBoxExtent().Y <= 68.0f);
+                TestTrue(TEXT("Hero board structural pieces remain within the authored 210 cm height"),
+                    Box->GetScaledBoxExtent().Z <= 105.0f);
+            }
+            if (Box->ComponentTags.Contains(TEXT("JobBoardInteraction")))
+            {
+                ++InteractionBoardBoxes;
+                TestEqual(TEXT("Board sightline target is query-only"),
+                    Box->GetCollisionEnabled(), ECollisionEnabled::QueryOnly);
+                TestEqual(TEXT("Board sightline target cannot block pawn movement"),
+                    Box->GetCollisionResponseToChannel(ECC_Pawn), ECR_Ignore);
+                TestEqual(TEXT("Board sightline target remains visible to the interaction trace"),
+                    Box->GetCollisionResponseToChannel(ECC_Visibility), ECR_Block);
+            }
+        }
+        TestEqual(TEXT("Mission board has only two posts and one notice-panel collision proxy"), StructuralBoardBoxes, 3);
+        TestEqual(TEXT("Mission board keeps a separate interaction sightline target"), InteractionBoardBoxes, 1);
+        const FTransform BoardTransform = Board->GetActorTransform();
+        FHitResult UnderBoardHit;
+        FCollisionQueryParams BoardPawnQuery(SCENE_QUERY_STAT(LowTideJobBoardPawnClearance), false);
+        TestFalse(TEXT("Board under-panel opening has no phantom pawn blocker"),
+            World->LineTraceSingleByChannel(UnderBoardHit,
+                BoardTransform.TransformPosition(FVector(-120.0f, 0.0f, 35.0f)),
+                BoardTransform.TransformPosition(FVector(40.0f, 0.0f, 35.0f)), ECC_Pawn, BoardPawnQuery));
+        FHitResult LanternSpaceHit;
+        TestFalse(TEXT("Board front lantern space has no phantom pawn blocker"),
+            World->LineTraceSingleByChannel(LanternSpaceHit,
+                BoardTransform.TransformPosition(FVector(-120.0f, 75.0f, 130.0f)),
+                BoardTransform.TransformPosition(FVector(-30.0f, 75.0f, 130.0f)), ECC_Pawn, BoardPawnQuery));
+        const UPointLightComponent* LanternLight = nullptr;
+        TInlineComponentArray<UPointLightComponent*> BoardLights(Board);
+        for (const UPointLightComponent* Light : BoardLights)
+        {
+            if (Light && Light->ComponentTags.Contains(TEXT("JobBoardLanternLight")))
+            {
+                LanternLight = Light;
+                break;
+            }
+        }
+        TestNotNull(TEXT("Board includes its small warm lantern light"), LanternLight);
+        if (LanternLight)
+        {
+            TestFalse(TEXT("Board lantern light does not add shadow cost"), LanternLight->CastShadows);
+            TestTrue(TEXT("Board lantern light stays local to the board"), LanternLight->AttenuationRadius <= 200.0f);
+            TestTrue(TEXT("Board lantern light follows the separately animated lantern"),
+                LanternLight->GetAttachParent() == (AnimatedLantern ? AnimatedLantern->GetAttachParent() : nullptr));
+        }
         FHitResult BoardHit;
         FCollisionQueryParams BoardQuery(SCENE_QUERY_STAT(LowTideJobBoardSightline), false);
-        const FVector BoardCenter = Board->GetActorLocation() + FVector(0.0f, 0.0f, 175.0f);
+        const FVector BoardCenter = Board->GetActorLocation() + FVector(0.0f, 0.0f, 135.0f);
         const FVector BoardFront = Board->GetActorForwardVector() * -300.0f;
         TestTrue(TEXT("Mission board is visible from its local front approach"),
             World->LineTraceSingleByChannel(BoardHit, BoardCenter + BoardFront, BoardCenter,
