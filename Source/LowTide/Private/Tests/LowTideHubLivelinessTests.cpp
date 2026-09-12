@@ -37,7 +37,7 @@ bool FLowTideHubLivelinessContractTest::RunTest(const FString& Parameters)
     }
     UStaticMeshComponent* Parrot = Meshes.Num() == 1 ? Meshes[0] : nullptr;
     TestNotNull(TEXT("Merged parrot component remains available"), Parrot);
-    if (Parrot)
+    if (Parrot && Parrot->GetStaticMesh())
     {
         const FVector Size = Parrot->GetStaticMesh()->GetBoundingBox().GetSize();
         TestTrue(TEXT("Merged parrot includes a readable elevated bird silhouette"), Size.Z >= 90.0f);

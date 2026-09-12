@@ -2,9 +2,16 @@
 
 ## Active milestone and deliverable
 
-M0.5 is Director-accepted; M1 remains a candidate awaiting Director playtest/art acceptance. Latest work is the focused water polish around the existing start hub and visible coast. No M2, new mechanics, broad world-art pass, paid service or Fast mode.
+M0.5 is Director-accepted; M1 remains a candidate awaiting Director playtest/art acceptance. Latest work replaces Papug with the Director-provided Papug2 in the existing hub; the completed water polish is retained. No M2, new mechanics, broad world-art pass, paid service or Fast mode.
 
-Windows executable: `Artifacts/Windows/LowTide.exe`. Inner binary: `Artifacts/Windows/LowTide/Binaries/Win64/LowTide.exe` (UTC 2026-09-12 19:12:27); final material recook/archive completed afterward. Start the current package, not an older copy.
+Windows executable: `Artifacts/Windows/LowTide.exe`. Inner binary: `Artifacts/Windows/LowTide/Binaries/Win64/LowTide.exe` (UTC 2026-09-12 21:37:57). Start the current package, not an older copy.
+
+## Papug2 replacement and validation
+
+- `HubLivelinessActor` now binds the fresh `/Game/Generated/MeshyHub/Papug2/SM_Meshy_Papug2_import/StaticMeshes/SM_Meshy_Papug2_import` mesh. Existing placement, 180-degree relative yaw, decorative no-collision behavior and zero animation tick remain. The intact bird/stand is 140 cm tall; both original GLBs are preserved. Isolated inspection/import scripts and provenance are recorded; Sol handled import and the lead handled integration/validation.
+- Source has 51,457 triangles, one material, UV0 and vertex normals. Base Color and packed metallic/roughness textures are retained with correct colour-space settings; the original has no normal map or rig. Import exited 0 with no errors/warnings. No new animation or unrelated hub changes.
+- Editor build passed (78.79 s); all 12 required automation tests passed with zero warnings/failures/skips. The existing liveliness test now guards against a missing mesh before reading bounds. Windows BuildCookRun passed (184.36 s), with no Error:/Warning: entries; texture cooking emitted memory-estimate notices but completed normally. Evidence: `Artifacts/Papug2Review/{build-editor.log,tests.log,test-index.json,package.log}`.
+- Fresh packaged DX11 close and trader-context views were inspected at `Artifacts/Papug2Review/final/{parrot,trader}.png`; both runs exited 0 with no runtime/material errors. Papug2 faces the intended player-side direction, its stand rests on the deck, and source colours/materials render correctly. No performance benchmark was repeated for this isolated replacement. Director visual acceptance remains pending.
 
 ## Coastal water polish
 
@@ -32,4 +39,4 @@ Walk 650 cm/s; Shift sprint 1040; Space jump 420, gravity 1.3, air control .2, s
 
 UE 5.8.2 CL56702186; VS2026/MSVC14.50, SDK10.0.26100.0, .NET10; Blender 5.2.1 LTS. DX11, no Lumen/Nanite, two build workers, 16 GB RAM / GTX1660Ti Max-Q. EUR 0. Sol handled the bounded material authoring/import/tune; lead integrated and validated.
 
-Next action: Director reviews the moving water from the start area, shoreline and working dock in the updated package, including colour, brightness, foam and visual richness. M1 art/gameplay acceptance remains pending. Do not start another pass or M2 automatically.
+Next action: Director reviews Papug2 in the updated package, alongside the previously delivered water improvements. M1 art/gameplay acceptance remains pending. Do not start another pass or M2 automatically.

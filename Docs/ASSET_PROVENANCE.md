@@ -117,6 +117,10 @@ These Director-provided generated assets join Budka, the mission board, Papug, V
 
 DockPiling is a project-authored derivative of the Director-generated Dock Straight Section: retained lower wooden post shaft only, source UVs and PBR material preserved, resized to approximately 30 x 27 x 400 cm. It contains 1,834 vertices / 3,548 triangles and reuses the DockStraight material without duplicate textures. Derived GLB SHA-256: `4D3926A4739061E5253877E7AB2E57118AE044A722FC32DC4E225BAD53894694`. Reproduction, import path and measured bounds are in `MESHY_DECK_DOCK_IMPORT.md`; the untouched original GLB remains in source control.
 
-## Project-authored coastal water
+## Papug2 replacement — 2026-09-12
+
+Director-provided Meshy-generated `SourceAssets/Generated/Papug2/Papug2.glb` replaces the displayed Papug; both originals remain preserved. Source SHA-256: `F477E096673C7724F0A02E83E5D64E6F4DFB1C6F674F187EC40712B89BA80D3E`. Usage remains subject to the Director/source account's Meshy licence. One mesh/material, 42,560 vertices / 51,457 triangles, UV0 and vertex normals, no rig/animation. The two source textures supply Base Color and packed metallic/roughness; no normal map is authored. `Scripts/InspectPapug2.py` normalizes the intact bird/stand to 140 cm; `Scripts/ImportPapug2.py` uses UE Interchange and imports only this donor under `/Game/Generated/MeshyHub/Papug2`. Measured UE bounds: 57.0693 x 67.7671 x 140 cm with grounded pivot. Base Color uses sRGB; packed MR uses linear Masks compression (G roughness, B metallic). Decorative collision stays disabled. Inspection/preview/import evidence: `Artifacts/MeshyHubReview/Papug2/`.
+
+## Project-authored coastal water assets
 
 `Scripts/PolishWater.py` deterministically authors three seamless 512 x 512 TGA inputs under `SourceAssets/Generated/Water`: two normal maps and one foam-breakup mask. These are project-authored procedural assets, not Meshy outputs or third-party downloads; no external licence or paid service is involved. Imported counterparts and the shared `M_LT_CoastalWater` material live under `/Game/Generated/Water`. Normal textures use linear Normalmap compression; the foam mask uses linear Masks compression. Originals are retained in Git LFS. The existing primitive water surface is reused; no external ocean mesh, simulation or reflection-capture asset is introduced.

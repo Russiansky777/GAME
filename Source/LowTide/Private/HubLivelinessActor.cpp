@@ -29,7 +29,7 @@ AHubLivelinessActor::AHubLivelinessActor()
     ConfigureDecorativeMesh(Parrot);
     // The full bird and its floor-standing perch are deliberately retained as one source mesh.
     static ConstructorHelpers::FObjectFinder<UStaticMesh> ParrotAsset(
-        TEXT("/Game/Generated/MeshyHub/Papug/SM_MeshyHub_Papug_import/StaticMeshes/SM_MeshyHub_Papug_import.SM_MeshyHub_Papug_import"));
+        TEXT("/Game/Generated/MeshyHub/Papug2/SM_Meshy_Papug2_import/StaticMeshes/SM_Meshy_Papug2_import.SM_Meshy_Papug2_import"));
     if (ParrotAsset.Succeeded()) Parrot->SetStaticMesh(ParrotAsset.Object);
 
     Tags.Add(TEXT("HubLiveliness"));
