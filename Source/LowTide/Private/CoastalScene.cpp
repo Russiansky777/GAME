@@ -343,6 +343,8 @@ void ACoastalScene::InitializeLayout()
         + CalculatePolylineLength(Layout.AlternateRouteWaypoints);
     Layout.OptionalRouteLengthCm = 2.0f * CalculatePolylineLength(Layout.OptionalRouteWaypoints);
     Layout.SettlementSafeBounds = FBox(FVector(-3200.0f, -3600.0f, -250.0f), FVector(3300.0f, 3200.0f, 1700.0f));
+    // The corner and berth extend just beyond the settlement box. Keep this union tight to the contained dock.
+    Layout.DockSafeBounds = FBox(FVector(3000.0f, 50.0f, -250.0f), FVector(3825.0f, 575.0f, 1700.0f));
     Layout.ExpeditionBounds = FBox(FVector(-3500.0f, -9000.0f, -600.0f), FVector(28000.0f, 9000.0f, 2200.0f));
 
     Layout.ReviewViews = {
@@ -679,7 +681,9 @@ void ACoastalScene::BuildSettlement()
     AddBoundarySegment(FVector(-2750.0f, 2900.0f, 0.0f), FVector(2750.0f, 2900.0f, 0.0f), -100.0f, 520.0f, TEXT("SettlementNorth"));
     AddBoundarySegment(FVector(-2750.0f, -3050.0f, 0.0f), FVector(2750.0f, -3050.0f, 0.0f), -100.0f, 520.0f, TEXT("SettlementSouth"));
     AddBoundarySegment(FVector(2750.0f, -3050.0f, 0.0f), FVector(2750.0f, -2520.0f, 0.0f), -100.0f, 520.0f, TEXT("SettlementEastLow"));
-    AddBoundarySegment(FVector(2750.0f, -1780.0f, 0.0f), FVector(2750.0f, 880.0f, 0.0f), -100.0f, 520.0f, TEXT("SettlementEastMiddle"));
+    // The working dock is the sole additional east-wall opening. Its 300 cm mouth centers the 154 cm straight section.
+    AddBoundarySegment(FVector(2750.0f, -1780.0f, 0.0f), FVector(2750.0f, 150.0f, 0.0f), -100.0f, 520.0f, TEXT("SettlementEastMiddleLow"));
+    AddBoundarySegment(FVector(2750.0f, 450.0f, 0.0f), FVector(2750.0f, 880.0f, 0.0f), -100.0f, 520.0f, TEXT("SettlementEastMiddleHigh"));
     AddBoundarySegment(FVector(2750.0f, 1870.0f, 0.0f), FVector(2750.0f, 2900.0f, 0.0f), -100.0f, 520.0f, TEXT("SettlementEastHigh"));
     AddInstance(CliffInstances, FVector(2750.0f, -2520.0f, 90.0f), FVector(1.2f, 1.2f, 4.0f));
     AddInstance(CliffInstances, FVector(2750.0f, -1780.0f, 90.0f), FVector(1.2f, 1.2f, 4.0f));
@@ -1107,8 +1111,35 @@ void ACoastalScene::BuildMeshyHubDeckAndDock()
     MeshyDockRepairedInstances->SetStaticMesh(MeshyDockRepairedMesh);
     MeshyDockPilingInstances->SetStaticMesh(MeshyDockPilingMesh);
 
-    // Only the inner landing sits inside the settled play space. The remaining berth is decorative beyond the
-    // preserved east boundary, so no false traversal surface or new boundary gap is introduced.
+    // The dock is playable through its one east-wall mouth. Source visuals stay collision-free; these smooth
+    // proxies trace their actual straight, corner and berth footprints at the shared 125 cm deck datum.
+    AddBoxBetween(RouteFloorCollision, FVector(2250.0f, 300.0f, 125.0f), FVector(3030.0f, 300.0f, 125.0f),
+        220.0f, 70.0f, -38.0f);
+    AddBoxBetween(RouteFloorCollision, FVector(3030.0f, 300.0f, 125.0f), FVector(3400.0f, 300.0f, 125.0f),
+        450.0f, 70.0f, -38.0f);
+    AddBoxBetween(RouteFloorCollision, FVector(3400.0f, 300.0f, 125.0f), FVector(3800.0f, 300.0f, 125.0f),
+        350.0f, 70.0f, -38.0f);
+
+    // Tall hidden containment follows the narrow approach, widened unloading corner and narrowed end berth.
+    // The short orthogonal joins preserve the step outline instead of cutting diagonally across usable deck space.
+    constexpr float DockBoundaryBaseZ = -100.0f;
+    constexpr float DockBoundaryHeight = 520.0f;
+    const auto AddDockBoundary = [this, DockBoundaryBaseZ, DockBoundaryHeight](const FVector& Start, const FVector& End, FName Name)
+    {
+        AddBoundarySegment(Start, End, DockBoundaryBaseZ, DockBoundaryHeight, Name);
+    };
+    AddDockBoundary(FVector(2750.0f, 150.0f, 0.0f), FVector(3030.0f, 150.0f, 0.0f), TEXT("DockApproachSouth"));
+    AddDockBoundary(FVector(3030.0f, 150.0f, 0.0f), FVector(3030.0f, 50.0f, 0.0f), TEXT("DockCornerSouthStep"));
+    AddDockBoundary(FVector(3030.0f, 50.0f, 0.0f), FVector(3400.0f, 50.0f, 0.0f), TEXT("DockCornerSouth"));
+    AddDockBoundary(FVector(3400.0f, 50.0f, 0.0f), FVector(3400.0f, 125.0f, 0.0f), TEXT("DockBerthSouthStep"));
+    AddDockBoundary(FVector(3400.0f, 125.0f, 0.0f), FVector(3800.0f, 125.0f, 0.0f), TEXT("DockBerthSouth"));
+    AddDockBoundary(FVector(3800.0f, 125.0f, 0.0f), FVector(3800.0f, 475.0f, 0.0f), TEXT("DockBerthEnd"));
+    AddDockBoundary(FVector(3800.0f, 475.0f, 0.0f), FVector(3400.0f, 475.0f, 0.0f), TEXT("DockBerthNorth"));
+    AddDockBoundary(FVector(3400.0f, 475.0f, 0.0f), FVector(3400.0f, 550.0f, 0.0f), TEXT("DockBerthNorthStep"));
+    AddDockBoundary(FVector(3400.0f, 550.0f, 0.0f), FVector(3030.0f, 550.0f, 0.0f), TEXT("DockCornerNorth"));
+    AddDockBoundary(FVector(3030.0f, 550.0f, 0.0f), FVector(3030.0f, 450.0f, 0.0f), TEXT("DockCornerNorthStep"));
+    AddDockBoundary(FVector(3030.0f, 450.0f, 0.0f), FVector(2750.0f, 450.0f, 0.0f), TEXT("DockApproachNorth"));
+
     MeshyDockInstances->AddInstance(FTransform(FRotator::ZeroRotator, FVector(2450.0f, 300.0f, 57.77f)));
     MeshyDockRepairedInstances->AddInstance(FTransform(FRotator::ZeroRotator, FVector(2830.0f, 300.0f, 58.04f)));
     MeshyDockCornerInstances->AddInstance(FTransform(FRotator::ZeroRotator, FVector(3200.0f, 300.0f, 62.64f)));
@@ -1142,6 +1173,21 @@ void ACoastalScene::BuildMeshyHubDeckAndDock()
     Crane->SetCastShadow(true);
     Crane->ComponentTags.Add(TEXT("MeshyHubCrane"));
     Crane->RegisterComponent();
+
+    // The source crane remains visual-only. Its compact mast-base proxy prevents walking through the winch
+    // while retaining a clear path to the hook from the north side of the platform.
+    UBoxComponent* CraneBaseCollision = NewObject<UBoxComponent>(this, TEXT("MeshySalvageCraneBaseCollision"));
+    AddInstanceComponent(CraneBaseCollision);
+    CraneBaseCollision->SetupAttachment(SceneRoot);
+    CraneBaseCollision->SetRelativeLocation(FVector(3310.0f, 200.0f, 230.0f));
+    CraneBaseCollision->SetBoxExtent(FVector(75.0f, 70.0f, 105.0f));
+    CraneBaseCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    CraneBaseCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
+    CraneBaseCollision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+    CraneBaseCollision->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    CraneBaseCollision->SetCollisionResponseToChannel(ECC_Camera, ECR_Block);
+    CraneBaseCollision->ComponentTags.Add(TEXT("MeshyHubCraneCollision"));
+    CraneBaseCollision->RegisterComponent();
 }
 
 void ACoastalScene::BuildHubNature()

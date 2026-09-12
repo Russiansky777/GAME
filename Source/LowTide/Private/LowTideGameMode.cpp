@@ -998,7 +998,9 @@ void ALowTideGameMode::UpdatePhenomenon(ALowTideCharacter* Character, float Delt
 
 bool ALowTideGameMode::IsInSafeSettlement(const FVector& Location) const
 {
-    return bM05Fixture ? Location.X <= SettlementEdgeX : SceneLayout.SettlementSafeBounds.IsInsideOrOn(Location);
+    return bM05Fixture ? Location.X <= SettlementEdgeX
+        : SceneLayout.SettlementSafeBounds.IsInsideOrOn(Location)
+            || SceneLayout.DockSafeBounds.IsInsideOrOn(Location);
 }
 
 FString ALowTideGameMode::GetObjectiveText() const

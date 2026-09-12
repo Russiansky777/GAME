@@ -12,9 +12,13 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
+#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "LowTideGameMode.h"
+#include "LowTideCharacter.h"
 #include "JobBoardActor.h"
 #include "TraderActor.h"
 
@@ -179,6 +183,16 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         FVector(2450.0f, -2150.0f, SettlementSweepZ), FVector(3050.0f, -2150.0f, SettlementSweepZ));
     SweepClear(TEXT("Blue ridge settlement return remains capsule-clear"),
         FVector(3050.0f, 1525.0f, 320.0f), FVector(2450.0f, 1225.0f, 320.0f));
+    SweepClear(TEXT("Working dock mouth is capsule-clear"),
+        FVector(2450.0f, 300.0f, SettlementSweepZ), FVector(2850.0f, 300.0f, SettlementSweepZ));
+    SweepBlocks(TEXT("Dock approach south edge blocks a jump-height capsule"),
+        FVector(2900.0f, 300.0f, SettlementSweepZ), FVector(2900.0f, -100.0f, SettlementSweepZ));
+    SweepBlocks(TEXT("Dock corner north edge blocks a jump-height capsule"),
+        FVector(3100.0f, 300.0f, SettlementSweepZ), FVector(3100.0f, 750.0f, SettlementSweepZ));
+    SweepBlocks(TEXT("Dock berth north step blocks a jump-height capsule"),
+        FVector(3600.0f, 300.0f, SettlementSweepZ), FVector(3600.0f, 750.0f, SettlementSweepZ));
+    SweepBlocks(TEXT("Dock berth outer end blocks a jump-height capsule"),
+        FVector(3600.0f, 300.0f, SettlementSweepZ), FVector(4050.0f, 300.0f, SettlementSweepZ));
 
     const auto GroundSupports = [this, World](const FString& Label, const FVector& XY)
     {
@@ -191,6 +205,50 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
     GroundSupports(TEXT("Settlement northeast interior has supporting floor"), FVector(2500.0f, 2600.0f, 0.0f));
     GroundSupports(TEXT("Settlement southwest interior has supporting floor"), FVector(-2500.0f, -2700.0f, 0.0f));
     GroundSupports(TEXT("Settlement southeast interior has supporting floor"), FVector(2500.0f, -2700.0f, 0.0f));
+    GroundSupports(TEXT("Dock inner straight has a smooth supporting floor"), FVector(2450.0f, 300.0f, 0.0f));
+    GroundSupports(TEXT("Dock unloading corner has a smooth supporting floor"), FVector(3200.0f, 350.0f, 0.0f));
+    GroundSupports(TEXT("Dock end berth has a smooth supporting floor"), FVector(3575.0f, 350.0f, 0.0f));
+
+    FHitResult CraneBaseHit;
+    FCollisionQueryParams CraneBaseQuery(SCENE_QUERY_STAT(LowTideCraneBaseSweep), false);
+    const bool bCraneBaseBlocks = World->SweepSingleByChannel(CraneBaseHit, FVector(3150.0f, 200.0f, SettlementSweepZ),
+        FVector(3475.0f, 200.0f, SettlementSweepZ), FQuat::Identity, ECC_Pawn, Capsule, CraneBaseQuery);
+    TestTrue(TEXT("Crane mast base blocks a player capsule"), bCraneBaseBlocks && CraneBaseHit.GetComponent()
+        && CraneBaseHit.GetComponent()->ComponentHasTag(TEXT("MeshyHubCraneCollision")));
+
+    APlayerController* DockController = World->SpawnActor<APlayerController>();
+    ALowTideCharacter* DockCharacter = World->SpawnActor<ALowTideCharacter>(FVector(2300.0f, 300.0f, 225.0f),
+        FRotator::ZeroRotator);
+    TestNotNull(TEXT("Dock traversal controller spawns"), DockController);
+    TestNotNull(TEXT("Dock traversal character spawns"), DockCharacter);
+    if (DockController && DockCharacter)
+    {
+        DockController->SetPlayer(NewObject<ULocalPlayer>(GEngine));
+        DockController->Possess(DockCharacter);
+        const auto WalkDockCharacter = [World, DockCharacter](const FVector& Target, int32 MaxFrames)
+        {
+            for (int32 Frame = 0; Frame < MaxFrames && FVector::Dist2D(DockCharacter->GetActorLocation(), Target) > 55.0f; ++Frame)
+            {
+                DockCharacter->AddMovementInput((Target - DockCharacter->GetActorLocation()).GetSafeNormal2D(), 1.0f);
+                World->Tick(LEVELTICK_All, 1.0f / 60.0f);
+                ++GFrameCounter;
+            }
+            return FVector::Dist2D(DockCharacter->GetActorLocation(), Target) <= 85.0f;
+        };
+
+        TestTrue(TEXT("CharacterMovement crosses the dock mouth from the hub"),
+            WalkDockCharacter(FVector(3100.0f, 300.0f, 225.0f), 160));
+        TestTrue(TEXT("CharacterMovement reaches the clear north side of the crane"),
+            WalkDockCharacter(FVector(3100.0f, 350.0f, 225.0f), 60));
+        TestTrue(TEXT("CharacterMovement reaches the working end berth beside the crane hook"),
+            WalkDockCharacter(FVector(3575.0f, 350.0f, 225.0f), 120));
+        TestTrue(TEXT("Dock traversal remains grounded at the berth"), DockCharacter->GetCharacterMovement()->IsMovingOnGround());
+        TestTrue(TEXT("CharacterMovement returns from the berth past the crane"),
+            WalkDockCharacter(FVector(3100.0f, 350.0f, 225.0f), 120));
+        TestTrue(TEXT("CharacterMovement returns through the dock mouth to the hub"),
+            WalkDockCharacter(FVector(2300.0f, 300.0f, 225.0f), 160));
+        TestTrue(TEXT("Dock return remains on supported floor"), DockCharacter->GetCharacterMovement()->IsMovingOnGround());
+    }
 
     if (Layout.ShortcutBlocker)
     {

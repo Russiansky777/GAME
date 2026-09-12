@@ -671,6 +671,20 @@ bool FLowTideM1PhenomenonRecoveryTest::RunTest(const FString& Parameters)
     Character->SetActorLocation(GameMode->GetSceneLayout().PlayerStart);
     GameMode->Tick(0.1f);
     TestEqual(TEXT("Safe second return banks new salvage"), Inventory->GetQuantity(TEXT("copper_wire")), 1);
+
+    // The newly walkable outer berth belongs to the base, even beyond the old settlement box.
+    const FVector BerthLocation(3575.0f, 350.0f, 225.0f);
+    TestTrue(TEXT("Outer berth is covered by the narrow dock safe area"),
+        GameMode->GetSceneLayout().DockSafeBounds.IsInsideOrOn(BerthLocation));
+    TestTrue(TEXT("Dock safety fixture carries a shard"), Inventory->TryAdd(TEXT("singing_shard"), 1, Reason));
+    GameMode->NotifyItemCollected(Character, TEXT("singing_shard"));
+    Character->SetActorLocation(BerthLocation);
+    Watcher->SetActorLocation(BerthLocation + FVector(100.0f, 0.0f, 0.0f));
+    Character->GetCharacterMovement()->Velocity = FVector::ZeroVector;
+    GameMode->Tick(0.1f);
+    TestTrue(TEXT("Watcher stays hidden at the working dock"), Watcher->IsHidden());
+    TestTrue(TEXT("Approaching the crane does not force a recovery"), Character->GetActorLocation().Equals(BerthLocation, 1.0f));
+    TestEqual(TEXT("Dock safety retains carried salvage"), Inventory->GetQuantity(TEXT("singing_shard")), 1);
     return true;
 }
 

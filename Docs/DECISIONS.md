@@ -95,3 +95,7 @@ Integrate the supplied Verstak and Lodka as intact PBR hero assets: a salvage so
 ## Director-approved Meshy Deck/Dock/Crane environment anchors — 2026-09-12
 
 Add the seven Deck modules, five Dock modules and one standalone coastal salvage Crane to the canonical Meshy quality reference alongside Budka, the mission board, Papug, Verstak and Lodka. Compose them as a small believable working hub with a clear base-to-water route, berth, unloading area and sorting/trade relationship, while preserving current elevations, collision safety, interaction visibility and open movement space. Use hidden simple collision proxies where needed and retain source GLBs unchanged; detailed inspection and import metadata belong in `MESHY_DECK_DOCK_IMPORT.md` and source identity/hashes in `ASSET_PROVENANCE.md`. The Crane is a salvage winch/crane, never the future tide gauge. This authorizes focused environment integration only: no tide-instrument system, boat gameplay, renderer expansion, broad world-art pass or M2.
+
+## 2026-09-12 — Walkable working dock (Director playtest correction)
+
+The crane/hook must be reachable from the hub. This supersedes the decorative-only outer berth limitation of checkpoint 1f66db4. Open only the dock mouth in the existing east boundary; use smooth hidden floor proxies, outer-edge containment and compact crane-base collision. Treat the contained dock as safe base territory. Preserve both expedition openings, source visuals and boat non-playability; no new crane interaction or boat mechanics.

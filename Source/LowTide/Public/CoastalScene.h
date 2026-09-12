@@ -71,6 +71,10 @@ struct LOWTIDE_API FCoastalSceneLayout
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FBox SettlementSafeBounds = FBox(EForceInit::ForceInit);
 
+    // Narrow safe extension for the working dock; it does not make the adjacent shore part of the hub.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    FBox DockSafeBounds = FBox(EForceInit::ForceInit);
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FBox ExpeditionBounds = FBox(EForceInit::ForceInit);
 
