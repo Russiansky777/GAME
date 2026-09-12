@@ -9,6 +9,7 @@ Saved/
 *.vcxproj.filters
 *.vcxproj.user
 Artifacts/
+Content/LocalLicensed/
 LocalTools/
 __pycache__/
 *.pyc

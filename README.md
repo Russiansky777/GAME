@@ -2,7 +2,7 @@
 
 Offline first-person coastal exploration game. M0.5 is an accepted historical
 greybox. M1 is the current authored stylized expedition candidate. Its fresh
-Win64 traversal-correction package and 11 passing regressions are recorded in
+Win64 package and regression results are recorded in
 Docs/CURRENT_STATE.md. Continued Director evaluation is the next step.
 
 ## Development
@@ -44,3 +44,16 @@ CharacterMovement over the main/optional/escape routes, tide closure, recovery,
 and containment. It does not replace a manual full playthrough or validate the
 8–12 minute target duration. `Artifacts/Windows/LowTide.exe` is the current M1
 candidate package; see `Docs/CURRENT_STATE.md` for its exact evidence and limits.
+
+## Hub art regeneration
+
+Normal builds use the checked-in LFS assets. To regenerate the authored art,
+run the relevant Blender generators (`GenerateTraderHub.py`, `GenerateHubSlice.py`,
+`GenerateHubLiveliness.py`) and `GenerateHubSurfaceTextures.py`; the latter uses
+Python with Pillow. GenerateM1Assets.py must supply the terrain OBJ inputs before
+regenerating the conforming hub deck. Run the matching import scripts inside
+Unreal Editor Python, plus `ImportHubDonors.py` for the retained CC0 donor subset.
+Run `UpgradeHubMaterials.py` **last**, after the trader/hub importers, to preserve
+the richer wood and moving canvas materials. The generated material graph names
+are versioned to avoid a UE 5.8 rooted-expression deletion failure during reimport.
+Source licences and acquisition limitations are recorded in `Docs/ASSET_PROVENANCE.md`.

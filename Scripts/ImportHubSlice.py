@@ -357,5 +357,17 @@ if __name__ == "__main__":
             apron_materials[material_name] = material
         import_mesh(apron_entry, apron_materials)
         log("SUCCESS: reimported hub apron only.")
+    elif "-HubWorkClusterOnly" in unreal.SystemLibrary.get_command_line():
+        work_entry = next(entry for entry in read_manifest()["meshes"]
+                          if entry["asset"] == "SM_LT_HubSlice_WorkCluster")
+        work_materials = {}
+        for material_name in work_entry["materials"]:
+            material_path = DESTINATION_PATH + "/MI_LT_HubSlice_" + safe_name(material_name)
+            material = unreal.EditorAssetLibrary.load_asset(material_path)
+            if not material:
+                fail("Missing existing hub material for work-cluster-only import: " + material_path)
+            work_materials[material_name] = material
+        import_mesh(work_entry, work_materials)
+        log("SUCCESS: reimported hub work cluster only; existing materials were reused.")
     else:
         main()

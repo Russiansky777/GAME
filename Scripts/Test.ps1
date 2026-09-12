@@ -21,7 +21,8 @@ $requiredTests = @(
     'LowTide.M1.Risk.InvalidGroundRecovery',
     'LowTide.M1.Traversal.JumpContainment',
     'LowTide.M1.Risk.PhenomenonRecoveryAndSecondTrip',
-    'LowTide.M1.Scene.Containment'
+    'LowTide.M1.Scene.Containment',
+    'LowTide.M1.Hub.LivelinessContract'
 )
 $passedTests = @($report.tests | Where-Object { $_.state -eq 'Success' } | ForEach-Object fullTestPath)
 if ($report.failed -ne 0 -or $report.notRun -ne 0 -or $report.inProcess -ne 0 -or ($report.succeeded + $report.succeededWithWarnings) -lt $requiredTests.Count -or @($requiredTests | Where-Object { $_ -notin $passedTests }).Count -ne 0) {

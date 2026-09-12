@@ -9,6 +9,8 @@
 #include "CoastalAudio.h"
 #include "CoastalDressing.h"
 #include "CoastalScene.h"
+#include "HubLivelinessActor.h"
+#include "HubDressingActor.h"
 #include "HAL/FileManager.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -363,6 +365,20 @@ void ALowTideGameMode::BuildM1Slice()
     SceneLayout = CoastalScene->GetLayout();
     JobBoard = GetWorld()->SpawnActor<AJobBoardActor>(FVector(1450.0f, 170.0f, 125.0f),
         FRotator(0.0f, 7.0f, 0.0f), Parameters);
+    if (AHubDressingActor* HubDressing = GetWorld()->SpawnActor<AHubDressingActor>(
+        FVector::ZeroVector, FRotator::ZeroRotator, Parameters))
+    {
+        HubDressing->BuildDressing();
+    }
+    // The perch projects from the shop's right front post, clear of Mara and the counter opening.
+    const FTransform ShopTransform(FRotator(0.0f, -38.0f, 0.0f), FVector(900.0f, -1350.0f, 125.0f));
+    if (AHubLivelinessActor* HubLife = GetWorld()->SpawnActor<AHubLivelinessActor>(
+        ShopTransform.TransformPosition(FVector(-87.0f, 312.0f, 185.0f)),
+        FRotator(0.0f, 142.0f, 0.0f), Parameters))
+    {
+        HubLife->SetLanternEnabled(false);
+        HubLife->Tags.Add(TEXT("M1HubLife"));
+    }
     CoastalDressing = GetWorld()->SpawnActor<ACoastalDressing>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters);
     if (CoastalDressing)
     {

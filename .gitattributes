@@ -11,3 +11,5 @@
 SourceAssets/QuaterniusNature/FBX/*.fbx filter=lfs diff=lfs merge=lfs -text
 SourceAssets/QuaterniusNature/glTF/*.bin filter=lfs diff=lfs merge=lfs -text
 SourceAssets/QuaterniusNature/Textures/*.png filter=lfs diff=lfs merge=lfs -text
+SourceAssets/HubDonors/KenneyPirateKitCC0/FBX/*.fbx filter=lfs diff=lfs merge=lfs -text
+SourceAssets/HubMaterials/*.png filter=lfs diff=lfs merge=lfs -text

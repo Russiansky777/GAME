@@ -1,0 +1,78 @@
+{
+  "license": "Project-authored; LOW TIDE repository",
+  "orientation": "+X forward, +Z up, centimeters",
+  "components": [
+    {
+      "asset": "SM_LT_Parrot_Perch",
+      "source": "SM_LT_Parrot_Perch.obj",
+      "pivot_cm": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "asset": "SM_LT_Parrot_Body",
+      "source": "SM_LT_Parrot_Body.obj",
+      "pivot_cm": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "asset": "SM_LT_Parrot_Head",
+      "source": "SM_LT_Parrot_Head.obj",
+      "pivot_cm": [
+        17,
+        0,
+        54
+      ]
+    },
+    {
+      "asset": "SM_LT_Parrot_Wing_L",
+      "source": "SM_LT_Parrot_Wing_L.obj",
+      "pivot_cm": [
+        1,
+        -8,
+        41
+      ]
+    },
+    {
+      "asset": "SM_LT_Parrot_Wing_R",
+      "source": "SM_LT_Parrot_Wing_R.obj",
+      "pivot_cm": [
+        1,
+        8,
+        41
+      ]
+    },
+    {
+      "asset": "SM_LT_Parrot_Tail",
+      "source": "SM_LT_Parrot_Tail.obj",
+      "pivot_cm": [
+        -13,
+        0,
+        29
+      ]
+    },
+    {
+      "asset": "SM_LT_Lantern_Rope",
+      "source": "SM_LT_Lantern_Rope.obj",
+      "pivot_cm": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "asset": "SM_LT_Hanging_Lantern",
+      "source": "SM_LT_Hanging_Lantern.obj",
+      "pivot_cm": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

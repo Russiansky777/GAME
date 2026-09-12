@@ -29,7 +29,7 @@ No creatures, combat, elaborate crafting, additional NPCs/story or advanced ocea
 
 ## Director-approved art direction
 
-LOW TIDE targets high-quality stylized semi-cartoon first-person 3D, not semi-realism or photorealism. Fell & Sell and Chop Chop Inc. inform stylization/production efficiency only; do not copy their assets, designs or identity. Aim for the richer stylized quality selected by the Director, with disciplined production complexity. The previously selected visual reference is not attached in the repository; do not invent its specifics.
+LOW TIDE targets high-quality stylized first-person 3D. The Director refinement of 2026-09-12 moves the hero hub toward a midpoint between stylization and realism: believable wood, rope, cloth and proportions, less toy-like geometry, with readable stylized silhouettes and disciplined production cost. This does not authorize a photorealistic pipeline. Fell & Sell and Chop Chop Inc. inform stylization/production efficiency only; do not copy their assets, designs or identity. Aim for the richer stylized quality selected by the Director, with disciplined production complexity. The previously selected visual reference is not attached in the repository; do not invent its specifics.
 
 Clean silhouettes, simplified attractive geometry, moderate detail, painterly/clean materials. Warm, appealing coastal daylight contrasts with mystery/dark-fantasy mood during anomalous low tide. Target commercial Steam presentation; avoid a cheap mobile/low-poly prototype appearance. M0.5 greybox is a mechanics test, not final art quality.
 

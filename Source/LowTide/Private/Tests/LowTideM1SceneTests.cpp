@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "CoastalScene.h"
+#include "HubDressingActor.h"
 #include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -277,6 +278,22 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         }
         TestEqual(TEXT("Trader hub has exactly three structural wall proxies"), TraderHubProxyCount, 3);
     }
+    int32 DonorActors = 0;
+    for (TActorIterator<AHubDressingActor> It(World); It; ++It)
+    {
+        ++DonorActors;
+        TInlineComponentArray<UHierarchicalInstancedStaticMeshComponent*> DonorFamilies(*It);
+        int32 DonorInstances = 0;
+        for (const UHierarchicalInstancedStaticMeshComponent* Family : DonorFamilies)
+        {
+            TestNotNull(TEXT("Hub donor mesh is available for cooking"), Family->GetStaticMesh().Get());
+            TestEqual(TEXT("Donor dressing cannot change traversal or interaction traces"),
+                Family->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            DonorInstances += Family->GetInstanceCount();
+        }
+        TestTrue(TEXT("Hub includes composed donor dressing"), DonorInstances >= 12);
+    }
+    TestEqual(TEXT("Exactly one hub donor composition is spawned"), DonorActors, 1);
     if (Layout.Mara)
     {
         const FVector MaraLocation = Layout.Mara->GetActorLocation();

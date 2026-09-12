@@ -162,9 +162,9 @@ def work_cluster():
  # map, route marks, mug, hand tools, bucket, stacked rope and two crates
  box('Map',(x-5,y,233),(150,92,2),'Cream',c,-8,1)
  tube('MapRoute',[(x-55,y-20,235),(x-15,y+4,236),(x+25,y-12,235),(x+55,y+22,236)],2,'TealPaint',c)
- cyl('Mug',(x-82,y+38,250),16,35,'TealPaint',c,14,b=2); torus('MugHandle',(x-101,y+38,251),11,3,'Brass',c,rot=(math.pi/2,0,0),seg=14)
+ cyl('Mug',(x-82,y+38,239),6,14,'TealPaint',c,14,b=1); torus('MugHandle',(x-90,y+38,239),4.5,1.5,'Brass',c,rot=(math.pi/2,0,0),seg=14)
  for j in range(3): box('Tool',(x+35+j*25,y+32-j*10,238),(55,7,6),'Brass' if j==1 else 'DarkWood',c,-25+j*18,2)
- cyl('Bucket',(75,-965,165),38,80,'TealPaint',c,14,b=2); tube('BucketHandle',[(48,-965,205),(75,-938,232),(102,-965,205)],3,'Brass',c)
+ cyl('Bucket',(75,-965,146),18,40,'TealPaint',c,14,b=1.5); tube('BucketHandle',[(60,-965,166),(75,-949,181),(90,-965,166)],1.8,'Brass',c)
  crate((88,-1080,125),(98,78,82),c,True); crate((-15,-1060,125),(82,68,64),c)
  for j,R in enumerate((42,34,26)): torus('RopeCoil',(35,-850,131+j*5),R,5,'Rope',c,seg=22)
 def goods_cluster():
@@ -270,13 +270,14 @@ def preview():
 def main():
  OUT.mkdir(parents=True,exist_ok=True); PRE.mkdir(parents=True,exist_ok=True); BLEND.mkdir(parents=True,exist_ok=True); setup(); apron(); work_cluster(); goods_cluster(); maritime(); ground_dressing(); job_board(); joined=convert_join(); rows=[]; total=0
  apron_only='--apron-only' in sys.argv
+ work_only='--work-only' in sys.argv
  for o in joined:
   v,t,mn,mx=stats(o); total+=t
-  if not apron_only or o.name==COMPONENTS[0]: export(o)
+  if (not apron_only and not work_only) or (apron_only and o.name==COMPONENTS[0]) or (work_only and o.name==COMPONENTS[1]): export(o)
   is_board=o.name=='SM_LT_HubSlice_JobBoard'; rows.append({'name':o.name,'obj':o.name+'.obj','intendedUnrealAsset':'/Game/Generated/HubSlice/'+o.name,'collision':False,'worldOrigin':not is_board,'localOrigin':is_board,'suggestedPlacement':{'worldLocationCm':[1450,170,125],'yawDegrees':7,'front':'local -X'} if is_board else None,'units':'cm','groundTopZ':126.0,'role':{'SM_LT_HubSlice_Apron':'deck','SM_LT_HubSlice_WorkCluster':'working-clutter','SM_LT_HubSlice_GoodsCluster':'sorted-goods','SM_LT_HubSlice_MaritimeDetails':'nautical-identity','SM_LT_HubSlice_GroundDressing':'edge-dressing','SM_LT_HubSlice_JobBoard':'interactive hero jobs board'}[o.name],'castShadows':o.name!='SM_LT_HubSlice_GroundDressing','materials':[s.material.name for s in o.material_slots if s.material],'vertices':v,'triangles':t,'boundsCm':{'min':[round(x,2) for x in mn],'max':[round(x,2) for x in mx]}})
- manifest={'assetFamily':'LOW TIDE Hub Slice Dressing','generator':'Scripts/GenerateHubSlice.py','authorship':'Project-authored procedural geometry; no external assets or textures.','units':'cm','worldOrigin':True,'groundTopZ':126.0,'objImport':{'preReflectedY':True,'importUniformScale':1,'combineMeshes':True,'generateCollision':False,'importMaterials':False},'palette':{n:list(c) for n,c in PAL.items()},'meshes':rows,'totalTriangles':total,'triangleBudget':50000,'withinBudget':total<=50000,'routeClearance':'Sizeable props remain outside both 900 cm route corridors and the direct Mara front-center approach.'}
+ manifest={'assetFamily':'LOW TIDE Hub Slice Dressing','generator':'Scripts/GenerateHubSlice.py','authorship':'Project-authored procedural geometry; no external assets or textures.','units':'cm','worldOrigin':True,'groundTopZ':126.0,'objImport':{'preReflectedY':True,'importUniformScale':1,'combineMeshes':True,'generateCollision':False,'importMaterials':False},'palette':{n:list(c) for n,c in PAL.items()},'meshes':rows,'totalTriangles':total,'triangleBudget':50000,'withinBudget':total<=50000,'routeClearance':'Decorative meshes have no collision. CoastalScene.BuildHubSlice applies runtime work/goods group offsets; review current composition separately from source coordinates.'}
  (OUT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
- if not apron_only: bpy.ops.wm.save_as_mainfile(filepath=str(BLEND/'LT_HubSlice_Source.blend')); preview()
+ if not apron_only and not work_only: bpy.ops.wm.save_as_mainfile(filepath=str(BLEND/'LT_HubSlice_Source.blend')); preview()
  if total>50000: raise RuntimeError(f'triangle budget exceeded: {total}')
  print(f'[GenerateHubSlice] {len(joined)} components, {total} triangles')
 if __name__=='__main__': main()

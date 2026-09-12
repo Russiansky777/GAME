@@ -537,11 +537,14 @@ void ACoastalScene::BuildLighting()
     FActorSpawnParameters Parameters;
     Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     if (ADirectionalLight* Sun = GetWorld()->SpawnActor<ADirectionalLight>(FVector::ZeroVector,
-        FRotator(-38.0f, 135.0f, 0.0f), Parameters))
+        FRotator(-48.0f, -55.0f, 0.0f), Parameters))
     {
         Sun->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+        // ADirectionalLight's native light component has a default rotation. Set the
+        // final world orientation explicitly instead of composing that offset at spawn.
+        Sun->GetLightComponent()->SetWorldRotation(FRotator(-48.0f, -55.0f, 0.0f));
         Sun->GetLightComponent()->SetIntensity(6.5f);
-        Sun->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.86f, 0.70f));
+        Sun->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.91f, 0.79f));
         if (UDirectionalLightComponent* Directional = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
         {
             Directional->SetAtmosphereSunLight(true);
@@ -565,8 +568,8 @@ void ACoastalScene::BuildLighting()
             SkySphere->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
             SkySphere->GetStaticMeshComponent()->SetCastShadow(false);
             UMaterialInstanceDynamic* SkyMID = UMaterialInstanceDynamic::Create(SkyCloudMaterial, SkySphere);
-            SkyMID->SetVectorParameterValue(TEXT("Zenith Color"), FLinearColor(0.08f, 0.30f, 0.65f));
-            SkyMID->SetVectorParameterValue(TEXT("Horizon color"), FLinearColor(0.55f, 0.72f, 0.80f));
+            SkyMID->SetVectorParameterValue(TEXT("Zenith Color"), FLinearColor(0.025f, 0.19f, 0.58f));
+            SkyMID->SetVectorParameterValue(TEXT("Horizon color"), FLinearColor(0.42f, 0.67f, 0.88f));
             SkyMID->SetVectorParameterValue(TEXT("Cloud color"), FLinearColor(0.95f, 0.93f, 0.86f));
             SkyMID->SetVectorParameterValue(TEXT("Overall Color"), FLinearColor::White);
             SkyMID->SetScalarParameterValue(TEXT("Cloud opacity"), 0.7f);
@@ -596,7 +599,7 @@ void ACoastalScene::BuildLighting()
     if (AExponentialHeightFog* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>(FVector(12000.0f, 0.0f, -250.0f),
         FRotator::ZeroRotator, Parameters))
     {
-        Fog->GetComponent()->SetFogDensity(0.0065f);
+        Fog->GetComponent()->SetFogDensity(0.0025f);
         Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(0.48f, 0.57f, 0.62f));
         SpawnedActors.Add(Fog);
     }
@@ -767,6 +770,16 @@ void ACoastalScene::BuildHubSlice()
         Part->SetCastShadow(Index != 4); // Tiny ground scatter does not justify another dynamic shadow cluster.
         Part->ComponentTags.Add(TEXT("HubSliceMesh"));
         Part->SetRelativeTransform(FTransform::Identity);
+        // Bring the existing workbench and sorted trade goods into the first view.
+        // Their former peripheral placement left the playable apron visually empty.
+        if (Index == 1)
+        {
+            Part->SetRelativeLocation(FVector(100.0f, 400.0f, 0.0f));
+        }
+        else if (Index == 2)
+        {
+            Part->SetRelativeLocation(FVector(-550.0f, -750.0f, 0.0f));
+        }
         Part->RegisterComponent();
     }
 

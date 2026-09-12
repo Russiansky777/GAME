@@ -133,7 +133,7 @@
         "max": [
           362.38,
           -803.48,
-          267.5
+          246.0
         ]
       }
     },
@@ -291,5 +291,5 @@
   "totalTriangles": 32098,
   "triangleBudget": 50000,
   "withinBudget": true,
-  "routeClearance": "Sizeable props remain outside both 900 cm route corridors and the direct Mara front-center approach."
+  "routeClearance": "Decorative meshes have no collision. CoastalScene.BuildHubSlice applies runtime work/goods group offsets; review current composition separately from source coordinates."
 }
