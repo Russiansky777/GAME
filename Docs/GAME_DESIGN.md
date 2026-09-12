@@ -42,3 +42,7 @@ The approved M1 traversal tuning is 650 cm/s normal walking and 1040 cm/s sprint
 The main, optional-risk and elevated return routes must read as one continuous playable surface across the settlement/M0.5 to M1 transitions. Visual ground and collision should agree; simple collision proxies are preferred. The shortcut closure and elevated escape remain unchanged, with tide timing at 300 seconds low tide and 180 seconds rising tide pending evidence of a real balance break.
 
 If the player falls below -1000 cm, the GameMode safety net restores the last supported dry spot, or the expedition start if submerged, while retaining inventory, mission and expedition snapshot state. Normal tide-failure salvage penalties remain unchanged. This is a fallback for rare geometry failures, not the intended route experience.
+
+### Canonical hero-asset quality reference — Director-approved 2026-09-12
+
+The externally generated Meshy Budka trader hut, Papug parrot and hero mission board establish the preferred starting-base quality: semi-stylized but believable, between stylized game art and realism, rich PBR, detailed hero assets, neither toy-like/cheap low-poly nor photorealistic. These assets supersede older primitive/procedural hub visuals as the reference. Preserve their quality and let nearby framing/composition improve toward it; do not restyle them downward. Moderate local rendering cost is acceptable with measurements and scalable settings. This authorizes their focused hub integration, not a broad world-art pass or M2.

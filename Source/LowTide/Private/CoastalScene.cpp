@@ -96,6 +96,8 @@ ACoastalScene::ACoastalScene()
         TEXT("/Game/Generated/M1/SM_LT_CoastalTerrainDeep.SM_LT_CoastalTerrainDeep"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SkySphereAsset(
         TEXT("/Engine/EngineSky/SM_SkySphere.SM_SkySphere"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyHubHutAsset(
+        TEXT("/Game/Generated/MeshyHub/Budka/SM_MeshyHub_Budka_import/StaticMeshes/SM_MeshyHub_Budka_import.SM_MeshyHub_Budka_import"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> SkyCloudAsset(
         TEXT("/Engine/EngineSky/M_Sky_Panning_Clouds2_Inst.M_Sky_Panning_Clouds2_Inst"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> AuthoredMaterial(
@@ -114,6 +116,7 @@ ACoastalScene::ACoastalScene()
     CoastalTerrainStoneMesh = CoastalTerrainStoneAsset.Object;
     CoastalTerrainDeepMesh = CoastalTerrainDeepAsset.Object;
     SkySphereMesh = SkySphereAsset.Object;
+    MeshyHubHutMesh = MeshyHubHutAsset.Object;
     CoastalTerrainSand->SetStaticMesh(CoastalTerrainSandMesh);
     CoastalTerrainStone->SetStaticMesh(CoastalTerrainStoneMesh);
     CoastalTerrainDeep->SetStaticMesh(CoastalTerrainDeepMesh);
@@ -639,40 +642,10 @@ void ACoastalScene::BuildSettlement()
 
 void ACoastalScene::BuildTraderHub()
 {
-    if (!Layout.Mara)
+    if (!Layout.Mara || !MeshyHubHutMesh)
     {
+        UE_LOG(LogTemp, Warning, TEXT("LOW TIDE Meshy trader hut unavailable. Mara remains playable without hut visuals."));
         return;
-    }
-
-    // The authored kit shares a local origin. Its front is -X and its rear points +X,
-    // so it is deliberately anchored independently of Mara's placeholder rotation.
-    struct FTraderHubMesh
-    {
-        const TCHAR* Name;
-        const TCHAR* AssetPath;
-    };
-    const FTraderHubMesh HubMeshes[] = {
-        { TEXT("Structure"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Structure.SM_LT_TraderHub_Structure") },
-        { TEXT("Awning"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Awning.SM_LT_TraderHub_Awning") },
-        { TEXT("Counter"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Counter.SM_LT_TraderHub_Counter") },
-        { TEXT("Storage"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Storage.SM_LT_TraderHub_Storage") },
-        { TEXT("Nautical"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Nautical.SM_LT_TraderHub_Nautical") },
-        { TEXT("Workbench"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Workbench.SM_LT_TraderHub_Workbench") },
-        { TEXT("Sign"), TEXT("/Game/Generated/TraderHub/SM_LT_TraderHub_Sign.SM_LT_TraderHub_Sign") },
-    };
-
-    TArray<UStaticMesh*> LoadedMeshes;
-    LoadedMeshes.Reserve(UE_ARRAY_COUNT(HubMeshes));
-    for (const FTraderHubMesh& HubMesh : HubMeshes)
-    {
-        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, HubMesh.AssetPath);
-        if (!Mesh)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("LOW TIDE trader hub kit unavailable: %s. Mara remains playable without hub visuals."),
-                HubMesh.AssetPath);
-            return;
-        }
-        LoadedMeshes.Add(Mesh);
     }
 
     USceneComponent* HubRoot = NewObject<USceneComponent>(this, TEXT("TraderHubRoot"));
@@ -684,22 +657,28 @@ void ACoastalScene::BuildTraderHub()
     HubRoot->SetWorldScale3D(FVector::OneVector);
     HubRoot->RegisterComponent();
 
-    for (int32 Index = 0; Index < UE_ARRAY_COUNT(HubMeshes); ++Index)
-    {
-        UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this,
-            *FString::Printf(TEXT("TraderHub_%s"), HubMeshes[Index].Name));
-        AddInstanceComponent(Part);
-        Part->SetupAttachment(HubRoot);
-        Part->SetStaticMesh(LoadedMeshes[Index]);
-        Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        Part->SetCastShadow(true);
-        Part->ComponentTags.Add(TEXT("TraderHubMesh"));
-        Part->SetRelativeTransform(FTransform::Identity);
-        Part->RegisterComponent();
-    }
+    // Interchange reflects the source Y facing at import. The visual root preserves the hub's
+    // established counter approach, while the mesh-only half turn restores its storefront front.
+    USceneComponent* HutVisualRoot = NewObject<USceneComponent>(this, TEXT("MeshyTraderHutVisualRoot"));
+    AddInstanceComponent(HutVisualRoot);
+    HutVisualRoot->SetupAttachment(HubRoot);
+    HutVisualRoot->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+    HutVisualRoot->RegisterComponent();
 
-    // These are the only hub collision additions: back and side shells. The authored front remains open
-    // so Mara's existing interaction ray, floor and route approach retain their validated behavior.
+    UStaticMeshComponent* Hut = NewObject<UStaticMeshComponent>(this, TEXT("MeshyTraderHut"));
+    AddInstanceComponent(Hut);
+    Hut->SetupAttachment(HutVisualRoot);
+    Hut->SetStaticMesh(MeshyHubHutMesh);
+    Hut->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
+    Hut->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Hut->SetCastShadow(true);
+    Hut->ComponentTags.Add(TEXT("TraderHubMesh"));
+    Hut->ComponentTags.Add(TEXT("MeshyHubHut"));
+    Hut->RegisterComponent();
+
+    // The imported storefront front faces local +Y after Interchange reflection. Its simple physical shell follows only walkable floor,
+    // counter, rear and sides. They retain Visibility occlusion; the counter top stays below
+    // Mara's interaction target so the established front approach remains directly traceable.
     struct FTraderHubProxy
     {
         FVector Center;
@@ -707,25 +686,31 @@ void ACoastalScene::BuildTraderHub()
         const TCHAR* Name;
     };
     const FTraderHubProxy Proxies[] = {
-        { FVector(442.0f, 0.0f, 260.0f), FVector(22.0f, 306.0f, 225.0f), TEXT("BackWall") },
-        { FVector(225.0f, -312.0f, 190.0f), FVector(178.0f, 18.0f, 170.0f), TEXT("LeftWall") },
-        { FVector(225.0f, 312.0f, 190.0f), FVector(178.0f, 18.0f, 170.0f), TEXT("RightWall") },
+        { FVector(0.0f, -10.0f, 16.0f), FVector(240.0f, 170.0f, 16.0f), TEXT("MeshyHutPlatform") },
+        { FVector(0.0f, -165.0f, 88.0f), FVector(230.0f, 20.0f, 48.0f), TEXT("MeshyHutCounter") },
+        { FVector(0.0f, 172.0f, 185.0f), FVector(240.0f, 16.0f, 160.0f), TEXT("MeshyHutBackWall") },
+        { FVector(-232.0f, 20.0f, 175.0f), FVector(16.0f, 145.0f, 150.0f), TEXT("MeshyHutLeftWall") },
+        { FVector(232.0f, 20.0f, 175.0f), FVector(16.0f, 145.0f, 150.0f), TEXT("MeshyHutRightWall") },
     };
     for (const FTraderHubProxy& Proxy : Proxies)
     {
         UBoxComponent* Box = NewObject<UBoxComponent>(this, FName(Proxy.Name));
         AddInstanceComponent(Box);
-        Box->SetupAttachment(HubRoot);
+        Box->SetupAttachment(HutVisualRoot);
         Box->SetRelativeLocation(Proxy.Center);
         Box->SetBoxExtent(Proxy.Extent);
-        Box->SetCollisionProfileName(TEXT("BlockAll"));
-        Box->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        Box->SetCollisionResponseToAllChannels(ECR_Ignore);
+        Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+        Box->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+        Box->SetCollisionResponseToChannel(ECC_Camera, ECR_Block);
         Box->ComponentTags.Add(TEXT("TraderHubCollision"));
+        Box->ComponentTags.Add(TEXT("MeshyHubStructuralCollision"));
         Box->RegisterComponent();
     }
 
-    UE_LOG(LogTemp, Display, TEXT("LOW TIDE trader hub kit loaded: %d authored meshes, 3 structural collision proxies."),
-        UE_ARRAY_COUNT(HubMeshes));
+    UE_LOG(LogTemp, Display, TEXT("LOW TIDE Meshy trader hut loaded: one authored mesh, %d structural collision proxies."),
+        UE_ARRAY_COUNT(Proxies));
 }
 
 void ACoastalScene::BuildHubSlice()

@@ -413,8 +413,16 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         {
             TraderHubMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("TraderHubMesh")) ? 1 : 0;
             HubSliceMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("HubSliceMesh")) ? 1 : 0;
+            if (Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubHut")))
+            {
+                const FVector HutSize = Mesh->GetStaticMesh()->GetBoundingBox().GetSize();
+                TestTrue(TEXT("Meshy hut preserves its substantial authored envelope"),
+                    HutSize.X >= 480.0f && HutSize.Y >= 350.0f && HutSize.Z >= 300.0f);
+                TestEqual(TEXT("Meshy hut stays visual-only; only simple proxies affect movement"),
+                    Mesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            }
         }
-        TestEqual(TEXT("Approved trader hub loads all seven authored meshes"), TraderHubMeshCount, 7);
+        TestEqual(TEXT("Trader hub uses the one intact authored Meshy hut"), TraderHubMeshCount, 1);
         TestEqual(TEXT("Hub quality slice loads all five world-origin dressing meshes"), HubSliceMeshCount, 5);
 
         TInlineComponentArray<UBoxComponent*> HubBoxes(TraderHubScene);
@@ -426,9 +434,15 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
                 ++TraderHubProxyCount;
                 TestTrue(TEXT("Trader hub collision is owned by the coastal scene, not Mara"),
                     Box->GetOwner() != Layout.Mara.Get());
+                TestEqual(TEXT("Structural hut collision is query-only"),
+                    Box->GetCollisionEnabled(), ECollisionEnabled::QueryOnly);
+                TestEqual(TEXT("Structural hut collision blocks pawn movement"),
+                    Box->GetCollisionResponseToChannel(ECC_Pawn), ECR_Block);
+                TestEqual(TEXT("Structural hut collision occludes visibility from closed sides"),
+                    Box->GetCollisionResponseToChannel(ECC_Visibility), ECR_Block);
             }
         }
-        TestEqual(TEXT("Trader hub has exactly three structural wall proxies"), TraderHubProxyCount, 3);
+        TestTrue(TEXT("Trader hut has compact structural floor, counter and shell collision"), TraderHubProxyCount >= 5);
     }
     int32 DonorActors = 0;
     for (TActorIterator<AHubDressingActor> It(World); It; ++It)
@@ -459,6 +473,11 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         const bool bHit = World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params);
         TestTrue(TEXT("Mara has a direct interaction sightline through her decorative stall"),
             bHit && Hit.GetActor() == Layout.Mara);
+        const FVector HutBackDirection = FRotator(0.0f, -38.0f, 0.0f).RotateVector(FVector::ForwardVector);
+        FHitResult RearHit;
+        TestTrue(TEXT("Trader hut rear remains a physical visibility occluder"),
+            World->LineTraceSingleByChannel(RearHit, TraceEnd + HutBackDirection * 380.0f, TraceEnd,
+                ECC_Visibility, Params) && RearHit.GetActor() == TraderHubScene);
     }
     return true;
 }

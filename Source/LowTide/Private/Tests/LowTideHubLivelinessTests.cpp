@@ -24,60 +24,24 @@ bool FLowTideHubLivelinessContractTest::RunTest(const FString& Parameters)
     }
 
     TestTrue(TEXT("Actor carries the scene composition tag"), Actor->ActorHasTag(TEXT("HubLiveliness")));
-    TestTrue(TEXT("Near animation never exceeds 30 Hz"), Actor->PrimaryActorTick.TickInterval >= (1.0f / 30.0f));
+    TestFalse(TEXT("Merged source parrot has no per-frame animation cost"), Actor->PrimaryActorTick.bCanEverTick);
 
     TArray<UStaticMeshComponent*> Meshes;
     Actor->GetComponents<UStaticMeshComponent>(Meshes);
-    TestEqual(TEXT("Bird, perch and optional lantern use eight bounded mesh components"), Meshes.Num(), 8);
-
-    UStaticMeshComponent* Body = nullptr;
-    UStaticMeshComponent* Head = nullptr;
-    UStaticMeshComponent* LeftWing = nullptr;
-    UStaticMeshComponent* RightWing = nullptr;
+    TestEqual(TEXT("Full bird and floor stand remain one intact authored mesh"), Meshes.Num(), 1);
     for (UStaticMeshComponent* Mesh : Meshes)
     {
         TestTrue(FString::Printf(TEXT("%s is decorative and non-colliding"), *Mesh->GetName()),
             Mesh->GetCollisionEnabled() == ECollisionEnabled::NoCollision);
         TestNotNull(FString::Printf(TEXT("%s has its authored mesh binding"), *Mesh->GetName()), Mesh->GetStaticMesh().Get());
-        if (Mesh->GetFName() == TEXT("ParrotHead"))
-        {
-            Head = Mesh;
-        }
-        else if (Mesh->GetFName() == TEXT("ParrotBody"))
-        {
-            Body = Mesh;
-        }
-        else if (Mesh->GetFName() == TEXT("ParrotWingLeft"))
-        {
-            LeftWing = Mesh;
-        }
-        else if (Mesh->GetFName() == TEXT("ParrotWingRight"))
-        {
-            RightWing = Mesh;
-        }
     }
-
-    TestNotNull(TEXT("Parrot body provides the assembly envelope"), Body);
-    TestNotNull(TEXT("Parrot head is a separately pivoted animated part"), Head);
-    TestNotNull(TEXT("Parrot has a separately pivoted left wing"), LeftWing);
-    TestNotNull(TEXT("Parrot has a separately pivoted right wing"), RightWing);
-    if (Body && Head && LeftWing && RightWing)
+    UStaticMeshComponent* Parrot = Meshes.Num() == 1 ? Meshes[0] : nullptr;
+    TestNotNull(TEXT("Merged parrot component remains available"), Parrot);
+    if (Parrot)
     {
-        const FBox BodyBox = Body->GetStaticMesh()->GetBoundingBox().TransformBy(Body->GetRelativeTransform());
-        const FBox HeadBox = Head->GetStaticMesh()->GetBoundingBox().TransformBy(Head->GetRelativeTransform());
-        const FBox LeftWingBox = LeftWing->GetStaticMesh()->GetBoundingBox().TransformBy(LeftWing->GetRelativeTransform());
-        const FBox RightWingBox = RightWing->GetStaticMesh()->GetBoundingBox().TransformBy(RightWing->GetRelativeTransform());
-        TestTrue(TEXT("Head overlaps the body at its neck rather than floating"), BodyBox.Intersect(HeadBox));
-        TestTrue(TEXT("Left wing overlaps the body rather than floating"), BodyBox.Intersect(LeftWingBox));
-        TestTrue(TEXT("Right wing overlaps the body rather than floating"), BodyBox.Intersect(RightWingBox));
-    }
-    if (Head)
-    {
-        Actor->ApplyIdlePoseForTesting(0.0f);
-        const FRotator FirstPose = Head->GetRelativeRotation();
-        Actor->ApplyIdlePoseForTesting(2.25f);
-        TestFalse(TEXT("Deterministic idle loop changes the visible head transform"),
-            Head->GetRelativeRotation().Equals(FirstPose, 0.01f));
+        const FVector Size = Parrot->GetStaticMesh()->GetBoundingBox().GetSize();
+        TestTrue(TEXT("Merged parrot includes a readable elevated bird silhouette"), Size.Z >= 90.0f);
+        TestTrue(TEXT("Merged parrot includes a compact floor stand"), Size.X <= 80.0f && Size.Y <= 80.0f);
     }
     World->DestroyWorld(false);
     World->RemoveFromRoot();

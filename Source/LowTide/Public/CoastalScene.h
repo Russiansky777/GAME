@@ -232,6 +232,9 @@ private:
     TObjectPtr<UStaticMesh> SkySphereMesh;
 
     UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyHubHutMesh;
+
+    UPROPERTY()
     TObjectPtr<UMaterialInterface> StylizedMaterial;
 
     UPROPERTY()

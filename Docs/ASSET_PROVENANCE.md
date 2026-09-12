@@ -68,3 +68,14 @@ Final composition reuses the authored work and goods groups with runtime offsets
 The Director generated and supplied `SourceAssets/Generated/JobBoard/SM_JobBoard_Hero_v01.glb` externally via Meshy and explicitly selected it to replace the mission-board visual. Original SHA-256: `20016CBAF14EBE6276AAE9A20A67A01AA8C3979BF0AAFEEB1BDAAA827603082B` (31,617,420 bytes). This is a Director-provided generated asset, not CC0, a purchased marketplace donor, or project-authored modeling. No Meshy account/plan or licence document was supplied; this entry records provenance without asserting additional licence terms. No generation API or paid service was used by the agent. The separate older Meshy GLB in this directory is not the selected source and remains untouched.
 
 Import inspection, derivation and material handling are recorded in `Docs/HERO_JOB_BOARD_IMPORT.md`; the original GLB is preserved without modification. Runtime use is limited to the existing mission-board actor and retains its expedition/mission interaction.
+
+## Director-generated Meshy Budka and Papug — 2026-09-12
+
+The Director generated both assets externally using Meshy.ai and supplied them as LOW TIDE project hero assets. Preserve these originals verbatim through scoped Git LFS:
+
+| Source | Format / bytes | Original SHA-256 |
+| --- | --- | --- |
+| `SourceAssets/Generated/Budka/Budka.glb` | binary glTF 2.0 / 120,760,744 | `1113EB9FB407EDAA6D42B830F2A80B1E70C7081C7A60CC2B0C0F0AD4DD280AE0` |
+| `SourceAssets/Generated/Papug/Papug.glb` | binary glTF 2.0 / 94,359,692 | `DB7F65A62CC3065E26DA49D67A6C0AE47D8B5C0391EF6E82B6A6F7D20AEEF1B6` |
+
+These are Director-provided generated assets, not CC0 assets or agent-authored models. No Meshy account/plan or licence document was supplied; no additional licence terms are asserted. No paid generation/API or asset purchase was performed by the agent. Geometry, textures, derivation and Unreal import details are recorded in `MESHY_HUB_IMPORT.md`. They supersede older prototype hut/parrot visuals as the approved hero-quality reference while retaining the existing mission/trader gameplay.
