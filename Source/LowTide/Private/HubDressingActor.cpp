@@ -102,11 +102,7 @@ void AHubDressingActor::BuildDressing()
 
     // Low foreground work cluster, split around the initial view axis. The near
     // pieces make the apron feel used without occupying the route centre.
-    Add(Crates, FVector(430.0f, -710.0f, 126.0f), FRotator(0.0f, 24.0f, 0.0f), FVector(0.48f));
-    Add(BottleCrates, FVector(545.0f, -760.0f, 126.0f), FRotator(0.0f, -12.0f, 0.0f), FVector(0.42f));
-    Add(Barrels, FVector(535.0f, 55.0f, 143.0f), FRotator(0.0f, 33.0f, 0.0f), FVector(0.45f));
-    Add(Rowboats, FVector(720.0f, 145.0f, 137.0f), FRotator(2.0f, -18.0f, -6.0f), FVector(0.52f));
-    Add(Paddles, FVector(620.0f, 95.0f, 145.0f), FRotator(90.0f, 15.0f, 5.0f), FVector(0.54f));
+    // Foreground crates and the toy-like rowboat were removed for the authored Meshy workbench.
 
     // Departure-edge cluster: readable silhouettes frame the route opening at +X
     // while remaining beyond the 700 cm clear travel lane centred near Y=-800.

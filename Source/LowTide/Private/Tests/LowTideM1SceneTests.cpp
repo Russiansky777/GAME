@@ -7,6 +7,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -409,10 +410,13 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         TInlineComponentArray<UStaticMeshComponent*> HubMeshes(TraderHubScene);
         int32 TraderHubMeshCount = 0;
         int32 HubSliceMeshCount = 0;
+        int32 MeshyHeroPropCount = 0;
+        UStaticMeshComponent* SalvageBoat = nullptr;
         for (const UStaticMeshComponent* Mesh : HubMeshes)
         {
             TraderHubMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("TraderHubMesh")) ? 1 : 0;
             HubSliceMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("HubSliceMesh")) ? 1 : 0;
+            MeshyHeroPropCount += Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubHeroProp")) ? 1 : 0;
             if (Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubHut")))
             {
                 const FVector HutSize = Mesh->GetStaticMesh()->GetBoundingBox().GetSize();
@@ -421,12 +425,30 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
                 TestEqual(TEXT("Meshy hut stays visual-only; only simple proxies affect movement"),
                     Mesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
             }
+            if (Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubWorkbench")))
+            {
+                const FVector WorkbenchSize = Mesh->GetStaticMesh()->GetBoundingBox().GetSize();
+                TestTrue(TEXT("Salvage workbench preserves its authored working envelope"),
+                    WorkbenchSize.X >= 180.0f && WorkbenchSize.Y >= 80.0f && WorkbenchSize.Z >= 110.0f);
+                TestEqual(TEXT("Workbench source mesh remains collision-free"), Mesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            }
+            if (Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubBoat")))
+            {
+                SalvageBoat = const_cast<UStaticMeshComponent*>(Mesh);
+                const FVector BoatSize = Mesh->GetStaticMesh()->GetBoundingBox().GetSize();
+                TestTrue(TEXT("Salvage boat preserves its readable coastal silhouette"),
+                    BoatSize.X >= 390.0f && BoatSize.Y >= 170.0f && BoatSize.Z >= 115.0f);
+                TestEqual(TEXT("Boat source mesh remains collision-free"), Mesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            }
         }
         TestEqual(TEXT("Trader hub uses the one intact authored Meshy hut"), TraderHubMeshCount, 1);
-        TestEqual(TEXT("Hub quality slice loads all five world-origin dressing meshes"), HubSliceMeshCount, 5);
-
+        TestEqual(TEXT("Only fitting hub-slice dressing remains beside the hero workbench"), HubSliceMeshCount, 3);
+        TestEqual(TEXT("Hub includes static Meshy workbench and boat anchors"), MeshyHeroPropCount, 2);
+        TestNotNull(TEXT("Meshy boat is present beside the base"), SalvageBoat);
         TInlineComponentArray<UBoxComponent*> HubBoxes(TraderHubScene);
         int32 TraderHubProxyCount = 0;
+        int32 WorkbenchProxyCount = 0;
+        int32 BoatProxyCount = 0;
         for (const UBoxComponent* Box : HubBoxes)
         {
             if (Box && Box->ComponentTags.Contains(TEXT("TraderHubCollision")))
@@ -441,8 +463,42 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
                 TestEqual(TEXT("Structural hut collision occludes visibility from closed sides"),
                     Box->GetCollisionResponseToChannel(ECC_Visibility), ECR_Block);
             }
+            if (Box && (Box->ComponentTags.Contains(TEXT("MeshyHubWorkbenchCollision"))
+                || Box->ComponentTags.Contains(TEXT("MeshyHubBoatCollision"))))
+            {
+                WorkbenchProxyCount += Box->ComponentTags.Contains(TEXT("MeshyHubWorkbenchCollision")) ? 1 : 0;
+                BoatProxyCount += Box->ComponentTags.Contains(TEXT("MeshyHubBoatCollision")) ? 1 : 0;
+                TestEqual(TEXT("Hero prop collision is query-only"), Box->GetCollisionEnabled(), ECollisionEnabled::QueryOnly);
+                TestEqual(TEXT("Hero prop collision blocks pawns without per-poly source collision"),
+                    Box->GetCollisionResponseToChannel(ECC_Pawn), ECR_Block);
+            }
         }
         TestTrue(TEXT("Trader hut has compact structural floor, counter and shell collision"), TraderHubProxyCount >= 5);
+        TestEqual(TEXT("Workbench has one compact under-worktop proxy"), WorkbenchProxyCount, 1);
+        TestEqual(TEXT("Boat has two compact hull proxies"), BoatProxyCount, 2);
+        if (SalvageBoat && Layout.RouteWaypoints.Num() >= 2)
+        {
+            FCollisionQueryParams BoatClearanceQuery(SCENE_QUERY_STAT(LowTideBoatRouteClearance), false);
+            for (TActorIterator<AActor> It(World); It; ++It)
+            {
+                if (*It != TraderHubScene)
+                {
+                    BoatClearanceQuery.AddIgnoredActor(*It);
+                }
+            }
+            TInlineComponentArray<UPrimitiveComponent*> ScenePrimitives(TraderHubScene);
+            for (UPrimitiveComponent* Primitive : ScenePrimitives)
+            {
+                if (Primitive && !Primitive->ComponentTags.Contains(TEXT("MeshyHubBoatCollision")))
+                {
+                    BoatClearanceQuery.AddIgnoredComponent(Primitive);
+                }
+            }
+            FHitResult BoatClearanceHit;
+            TestFalse(TEXT("Boat hull stays more than 500 cm clear of the actual main-route launch sweep"),
+                World->SweepSingleByChannel(BoatClearanceHit, Layout.RouteWaypoints[0], Layout.RouteWaypoints[1],
+                    FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(500.0f, 500.0f), BoatClearanceQuery));
+        }
     }
     int32 DonorActors = 0;
     for (TActorIterator<AHubDressingActor> It(World); It; ++It)

@@ -184,7 +184,7 @@ def import_mesh(entry, materials):
         fail("{} imported {} slots; manifest declares {}".format(
             entry["asset"], len(slots), len(entry["materials"])))
     imported_names = [str(slot.get_editor_property("material_slot_name")) for slot in slots]
-    if imported_names != entry["materials"]:
+    if len(set(imported_names)) != len(imported_names) or set(imported_names) != set(entry["materials"]):
         fail("{} imported slots {}; manifest declares {}".format(
             entry["asset"], imported_names, entry["materials"]))
     bounds = mesh.get_bounding_box()
@@ -194,7 +194,8 @@ def import_mesh(entry, materials):
         if any(abs(value - float(expected[label][axis])) > 0.1 for axis, value in enumerate(values)):
             fail("{} {} bounds {} differ from manifest {}".format(
                 entry["asset"], label, values, expected[label]))
-    for index, material_name in enumerate(entry["materials"]):
+    # Interchange can retain the previous slot order on reimport; bind by actual slot name.
+    for index, material_name in enumerate(imported_names):
         mesh.set_material(index, materials[material_name])
     unreal.EditorAssetLibrary.save_loaded_asset(mesh)
     log("Imported {} with {} material slots".format(asset_path, len(slots)))

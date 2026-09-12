@@ -82,23 +82,22 @@
       "role": "deck",
       "castShadows": true,
       "materials": [
-        "WarmWood",
         "DarkWood",
-        "Brass",
-        "TealPaint"
+        "WarmWood",
+        "Brass"
       ],
-      "vertices": 7068,
-      "triangles": 13102,
+      "vertices": 6912,
+      "triangles": 13056,
       "boundsCm": {
         "min": [
-          -624.68,
-          -1718.57,
-          117.0
+          -627.62,
+          -1722.93,
+          115.5
         ],
         "max": [
-          1922.48,
-          614.76,
-          149.75
+          1927.62,
+          622.93,
+          149.53
         ]
       }
     },
@@ -288,7 +287,7 @@
       }
     }
   ],
-  "totalTriangles": 32098,
+  "totalTriangles": 32052,
   "triangleBudget": 50000,
   "withinBudget": true,
   "routeClearance": "Decorative meshes have no collision. CoastalScene.BuildHubSlice applies runtime work/goods group offsets; review current composition separately from source coordinates."

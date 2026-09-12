@@ -129,6 +129,7 @@ private:
     void BuildSettlement();
     void BuildTraderHub();
     void BuildHubSlice();
+    void BuildMeshyHubHeroProps();
     void BuildHubNature();
     void BuildMainRoute();
     void BuildAlternateRoute();
@@ -233,6 +234,12 @@ private:
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> MeshyHubHutMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyHubWorkbenchMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyHubBoatMesh;
 
     UPROPERTY()
     TObjectPtr<UMaterialInterface> StylizedMaterial;

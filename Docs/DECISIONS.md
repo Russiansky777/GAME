@@ -87,3 +87,7 @@ Build a substantially richer keeper-quality starting base using selected real fr
 ## Director-approved Meshy hut/parrot integration — 2026-09-12
 
 Use `SourceAssets/Generated/Budka/Budka.glb` and `Papug/Papug.glb` as preferred hero visuals alongside the new mission board. Preserve source files, PBR quality and believable uniform scale. Replace conflicting older trader structure/old bird visuals while preserving Mara's exact interaction position, trading/mission state and the expedition approach. Preserve merged masters rather than damaging textures to force separation. Papug may use a restrained existing rig or cheap clean idle; a documented static fallback is acceptable if proper animation is disproportionate. Retain the conservative renderer, inspect local asset/draw cost, and validate a Windows package and coherent spawn/close views. No broader world pass or M2.
+
+## Director-approved Meshy workbench/boat composition — 2026-09-12
+
+Integrate the supplied Verstak and Lodka as intact PBR hero assets: a salvage sorting zone near Budka and a small coastal boat beside the base. All five Meshy heroes define the quality target. Recompose the immediate hub, remove conflicting crude support geometry, preserve clear routes and Mara/board gameplay. Optional motion only if cheap and physically appropriate; no boat gameplay or new systems. Preserve sources and rendering baseline, profile before reducing quality, validate packaged close/spawn/shore views. No M2 or broad world-art pass.

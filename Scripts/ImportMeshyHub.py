@@ -28,6 +28,26 @@ SPECS = {
         "material": DEST + "/Materials/M_MeshyHub_Papug_V1",
         "expected_size": (61.395, 67.030, 140.0),
     },
+    "Lodka": {
+        "source": os.path.join(ROOT, "Lodka", "SM_MeshyHub_Lodka_import.glb"),
+        "destination": DEST + "/Lodka",
+        "folder": DEST + "/Lodka/SM_MeshyHub_Lodka_import",
+        "mesh": DEST + "/Lodka/SM_MeshyHub_Lodka_import/StaticMeshes/SM_MeshyHub_Lodka_import",
+        "material": DEST + "/Materials/M_MeshyHub_Lodka_V1",
+        "expected_size": (400.0, 179.679, 121.885),
+        "texture_names": ("texture_0", "texture_0_metallic_roughness"),
+        "native_front": "bow -X",
+        "imported_material": "BakedMaterial",
+    },
+    "Verstak": {
+        "source": os.path.join(ROOT, "Verstak", "SM_MeshyHub_Verstak_import.glb"),
+        "destination": DEST + "/Verstak",
+        "folder": DEST + "/Verstak/SM_MeshyHub_Verstak_import",
+        "mesh": DEST + "/Verstak/SM_MeshyHub_Verstak_import/StaticMeshes/SM_MeshyHub_Verstak_import",
+        "material": DEST + "/Materials/M_MeshyHub_Verstak_V1",
+        "expected_size": (200.0, 87.773, 115.904),
+        "native_front": "working side +Y",
+    },
 }
 
 
@@ -40,7 +60,7 @@ def log(message):
     unreal.log("[ImportMeshyHub] " + message)
 
 
-def imported_textures(folder):
+def imported_textures(folder, wanted_names):
     textures = []
     for path in unreal.EditorAssetLibrary.list_assets(folder, recursive=True, include_folder=False):
         asset = unreal.EditorAssetLibrary.load_asset(path)
@@ -48,7 +68,7 @@ def imported_textures(folder):
             textures.append(asset)
     by_name = {texture.get_name().lower(): texture for texture in textures}
     selected = []
-    for wanted in ("image_0", "image_1", "image_2"):
+    for wanted in wanted_names:
         matches = [texture for name, texture in by_name.items() if name == wanted or name.endswith("_" + wanted)]
         if len(matches) != 1:
             fail("Expected exactly one {} below {}; found {}".format(
@@ -61,7 +81,7 @@ def expression(material, cls, x, y):
     return unreal.MaterialEditingLibrary.create_material_expression(material, cls, x, y)
 
 
-def rebuild_material(path, base_color, packed_mr, normal):
+def rebuild_material(path, base_color, packed_mr, normal=None):
     directory, name = path.rsplit("/", 1)
     unreal.EditorAssetLibrary.make_directory(directory)
     if unreal.EditorAssetLibrary.does_asset_exist(path):
@@ -70,16 +90,18 @@ def rebuild_material(path, base_color, packed_mr, normal):
             fail(path + " exists but is not a Material")
         samples = [node for node in unreal.MaterialEditingLibrary.get_material_expressions(material)
                    if isinstance(node, unreal.MaterialExpressionTextureSample)]
-        if len(samples) != 3:
+        expected_samples = 3 if normal else 2
+        if len(samples) != expected_samples:
             fail("Existing versioned graph has unexpected structure; create a new version instead of deleting graph roots: " + path)
         samples.sort(key=lambda node: node.get_editor_property("material_expression_editor_y"))
-        base, packed, normal_sample = samples
+        base, packed = samples[:2]
+        normal_sample = samples[2] if normal else None
     else:
         material = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
             name, directory, unreal.Material, unreal.MaterialFactoryNew())
         base = expression(material, unreal.MaterialExpressionTextureSample, -620, -100)
         packed = expression(material, unreal.MaterialExpressionTextureSample, -620, 140)
-        normal_sample = expression(material, unreal.MaterialExpressionTextureSample, -620, 380)
+        normal_sample = expression(material, unreal.MaterialExpressionTextureSample, -620, 380) if normal else None
     # Update the actual nodes on repeat runs. UE 5.8 can root expressions in a
     # way that makes delete-all unsafe, so structural changes require a new
     # versioned master rather than deleting an existing graph.
@@ -89,14 +111,16 @@ def rebuild_material(path, base_color, packed_mr, normal):
     base.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
     packed.set_editor_property("texture", packed_mr)
     packed.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
-    normal_sample.set_editor_property("texture", normal)
-    normal_sample.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
-    links = (
+    if normal_sample:
+        normal_sample.set_editor_property("texture", normal)
+        normal_sample.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+    links = [
         (base, "RGB", unreal.MaterialProperty.MP_BASE_COLOR),
         (packed, "G", unreal.MaterialProperty.MP_ROUGHNESS),
         (packed, "B", unreal.MaterialProperty.MP_METALLIC),
-        (normal_sample, "RGB", unreal.MaterialProperty.MP_NORMAL),
-    )
+    ]
+    if normal_sample:
+        links.append((normal_sample, "RGB", unreal.MaterialProperty.MP_NORMAL))
     for node, output, prop in links:
         if not unreal.MaterialEditingLibrary.connect_material_property(node, output, prop):
             fail("Could not connect {} to {} on {}".format(output, prop, path))
@@ -105,17 +129,18 @@ def rebuild_material(path, base_color, packed_mr, normal):
     return material
 
 
-def validate_texture_settings(base, packed, normal):
+def validate_texture_settings(base, packed, normal=None):
     base.set_editor_property("srgb", True)
     packed.set_editor_property("srgb", False)
     packed.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_MASKS)
-    normal.set_editor_property("srgb", False)
-    normal.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
-    # UE 5.8 Interchange converts glTF's normal convention by setting this once;
-    # keep and assert it rather than flipping pixels or the material a second time.
-    if not normal.get_editor_property("flip_green_channel"):
-        fail("Interchange normal texture did not retain required flip_green_channel: " + normal.get_path_name())
-    for texture in (base, packed, normal):
+    if normal:
+        normal.set_editor_property("srgb", False)
+        normal.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
+        # UE 5.8 Interchange converts glTF's normal convention by setting this once;
+        # keep and assert it rather than flipping pixels or the material a second time.
+        if not normal.get_editor_property("flip_green_channel"):
+            fail("Interchange normal texture did not retain required flip_green_channel: " + normal.get_path_name())
+    for texture in tuple(item for item in (base, packed, normal) if item):
         unreal.EditorAssetLibrary.save_loaded_asset(texture)
 
 
@@ -135,7 +160,10 @@ def import_one(label, spec):
     mesh = unreal.EditorAssetLibrary.load_asset(spec["mesh"])
     if not isinstance(mesh, unreal.StaticMesh):
         fail("Interchange did not create stable mesh path " + spec["mesh"])
-    base, packed, normal = imported_textures(spec["folder"])
+    wanted_names = spec.get("texture_names", ("image_0", "image_1", "image_2"))
+    textures = imported_textures(spec["folder"], wanted_names)
+    base, packed = textures[:2]
+    normal = textures[2] if len(textures) == 3 else None
     validate_texture_settings(base, packed, normal)
     material = rebuild_material(spec["material"], base, packed, normal)
     mesh.set_material(0, material)
@@ -150,19 +178,22 @@ def import_one(label, spec):
     if abs(bounds.min.z) > 0.5:
         fail("{} expected ground pivot min Z=0; got {}".format(label, bounds.min.z))
     unreal.EditorAssetLibrary.save_loaded_asset(mesh)
-    imported_material = spec["folder"] + "/Materials/Material_0"
+    imported_material = spec["folder"] + "/Materials/" + spec.get("imported_material", "Material_0")
     if unreal.EditorAssetLibrary.does_asset_exist(imported_material):
         if not unreal.EditorAssetLibrary.delete_asset(imported_material):
             fail("Could not remove unused Interchange material " + imported_material)
-    log("{} SUCCESS mesh={} material={} bounds min={} max={} cm; native front +Y".format(
-        label, spec["mesh"], spec["material"], bounds.min, bounds.max))
+    log("{} SUCCESS mesh={} material={} bounds min={} max={} cm; {}".format(
+        label, spec["mesh"], spec["material"], bounds.min, bounds.max,
+        spec.get("native_front", "native front +Y")))
 
 
 def main():
-    for label, spec in SPECS.items():
+    labels = ("Lodka", "Verstak") if "-MeshyWorkBoatOnly" in unreal.SystemLibrary.get_command_line() else SPECS.keys()
+    for label in labels:
+        spec = SPECS[label]
         import_one(label, spec)
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
-    log("SUCCESS: imported and validated Budka and Papug")
+    log("SUCCESS: imported and validated " + ", ".join(labels))
 
 
 if __name__ == "__main__":

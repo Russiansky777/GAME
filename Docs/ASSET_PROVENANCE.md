@@ -79,3 +79,14 @@ The Director generated both assets externally using Meshy.ai and supplied them a
 | `SourceAssets/Generated/Papug/Papug.glb` | binary glTF 2.0 / 94,359,692 | `DB7F65A62CC3065E26DA49D67A6C0AE47D8B5C0391EF6E82B6A6F7D20AEEF1B6` |
 
 These are Director-provided generated assets, not CC0 assets or agent-authored models. No Meshy account/plan or licence document was supplied; no additional licence terms are asserted. No paid generation/API or asset purchase was performed by the agent. Geometry, textures, derivation and Unreal import details are recorded in `MESHY_HUB_IMPORT.md`. They supersede older prototype hut/parrot visuals as the approved hero-quality reference while retaining the existing mission/trader gameplay.
+
+## Director-generated Meshy Lodka and Verstak — 2026-09-12
+
+The Director generated both externally using Meshy.ai and selected them as LOW TIDE hero assets. Original binary glTF 2.0 sources remain unchanged under Git LFS:
+
+| Source | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `SourceAssets/Generated/Lodka/Lodka.glb` | 30,394,452 | `18DD0BA514A26646188EF583AB9E3F7207AF41C68CA0385B5D6626C175880335` |
+| `SourceAssets/Generated/Verstak/Verstak.glb` | 100,025,792 | `E925FDAA7764455FB9F84991C684F490CD0ED7C4836971BEBF3F8867FC0AD89A` |
+
+Director-provided generated assets, not CC0 or agent-authored models. No account/plan or licence document was supplied; no additional terms are asserted. No paid generation/API or purchase was performed by the agent. Import metadata and reproduction: `MESHY_WORK_BOAT_IMPORT.md`. These assets extend the approved Meshy hub quality references without adding boat gameplay or a crafting system.

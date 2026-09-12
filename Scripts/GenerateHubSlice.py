@@ -104,21 +104,6 @@ def _deck_route_overlay(c):
   for index in range(1,len(poly)-1): faces.append((base,base+index,base+index+1))
  mesh=bpy.data.meshes.new('WorkingDeckRouteOverlayMesh'); mesh.from_pydata(vertices,[],faces); mesh.update()
  overlay=bpy.data.objects.new('WorkingDeckRouteOverlay',mesh); bpy.context.collection.objects.link(overlay); tag(overlay,c,'WarmWood')
- # Reintroduce narrow plank seams across the conforming skin without exposing terrain.
- seam_polygons=[]
- for poly in polygons:
-  unraised=[(x,y,z-2.0) for x,y,z in poly]
-  for seam_x in range(-960,1000,80):
-   seam=_clip_polygon(unraised,lambda p,s=seam_x: local(p)[0]-(s-1.2))
-   seam=_clip_polygon(seam,lambda p,s=seam_x: (s+1.2)-local(p)[0]) if seam else []
-   if len(seam)>=3: seam_polygons.append([(x,y,z+2.5) for x,y,z in seam])
- if seam_polygons:
-  seam_vertices=[]; seam_faces=[]
-  for poly in seam_polygons:
-   base=len(seam_vertices); seam_vertices.extend(poly)
-   for index in range(1,len(poly)-1): seam_faces.append((base,base+index,base+index+1))
-  seam_mesh=bpy.data.meshes.new('WorkingDeckRouteSeamsMesh'); seam_mesh.from_pydata(seam_vertices,[],seam_faces); seam_mesh.update()
-  seam_object=bpy.data.objects.new('WorkingDeckRouteSeams',seam_mesh); bpy.context.collection.objects.link(seam_object); tag(seam_object,c,'DarkWood')
  # Static proof: every sampled elevated terrain point in the deck has skin at terrain +2 cm.
  samples=0; max_error=0.0
  for local_x in range(-1020,1021,40):
@@ -130,7 +115,7 @@ def _deck_route_overlay(c):
    if not skin: raise RuntimeError(f'Deck overlay misses elevated terrain at {x:.2f},{y:.2f}')
    error=abs(max(skin)-(max(terrain)+2.0)); max_error=max(max_error,error); samples+=1
  if samples==0 or max_error>.01: raise RuntimeError(f'Deck overlay surface validation failed: {samples} samples, error {max_error:.4f}')
- print(f'[GenerateHubSlice] deck overlay: {source_triangles} clipped terrain triangles, {len(faces)} skin + {sum(len(p)-2 for p in seam_polygons)} seam triangles, Z {min(v[2] for v in vertices):.3f}..{max(v[2] for v in vertices):.3f}; {samples} elevated samples, max error {max_error:.4f} cm')
+ print(f'[GenerateHubSlice] deck overlay: {source_triangles} clipped terrain triangles, {len(faces)} skin triangles, Z {min(v[2] for v in vertices):.3f}..{max(v[2] for v in vertices):.3f}; {samples} elevated samples, max error {max_error:.4f} cm')
 def crate(p,s,c,accent=False):
  x,y,z=p; sx,sy,sz=s
  for zz in (z+sz*.18,z+sz*.48,z+sz*.78): box('CrateSlat',(x,y,zz),(sx,sy,sz*.22),'Cream',c,-8,1.5)
@@ -146,10 +131,13 @@ def apron():
  # One continuous flush working deck spans the camera foreground, shop apron,
  # and first route meters. A single field avoids hidden overlap and z-fighting.
  a=math.radians(-30); cx,cy=650,-550
+ # Dark backing sits half a centimetre below the plank tops so their bevels read
+ # as tight joints instead of exposing the pale gameplay floor.
+ box('WorkingDeckBacking',(cx,cy,120.5),(2080,1508,10),'DarkWood',c,-30,.1)
  for i in range(26):
   lx=-1000+i*80; ly=(i%4-1.5)*2.2
   x=cx+lx*math.cos(a)-ly*math.sin(a); y=cy+lx*math.sin(a)+ly*math.cos(a)
-  plank('WorkingDeckPlank',(x,y,121.5),(76,1500,9),c,i in (2,10,18,24),r=-30)
+  plank('WorkingDeckPlank',(x,y,121.5),(80,1500,9),c,False,r=-30)
  _deck_route_overlay(c)
 def work_cluster():
  c=COMPONENTS[1]; x,y=250,-900

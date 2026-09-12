@@ -98,6 +98,10 @@ ACoastalScene::ACoastalScene()
         TEXT("/Engine/EngineSky/SM_SkySphere.SM_SkySphere"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyHubHutAsset(
         TEXT("/Game/Generated/MeshyHub/Budka/SM_MeshyHub_Budka_import/StaticMeshes/SM_MeshyHub_Budka_import.SM_MeshyHub_Budka_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyHubWorkbenchAsset(
+        TEXT("/Game/Generated/MeshyHub/Verstak/SM_MeshyHub_Verstak_import/StaticMeshes/SM_MeshyHub_Verstak_import.SM_MeshyHub_Verstak_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyHubBoatAsset(
+        TEXT("/Game/Generated/MeshyHub/Lodka/SM_MeshyHub_Lodka_import/StaticMeshes/SM_MeshyHub_Lodka_import.SM_MeshyHub_Lodka_import"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> SkyCloudAsset(
         TEXT("/Engine/EngineSky/M_Sky_Panning_Clouds2_Inst.M_Sky_Panning_Clouds2_Inst"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> AuthoredMaterial(
@@ -117,6 +121,8 @@ ACoastalScene::ACoastalScene()
     CoastalTerrainDeepMesh = CoastalTerrainDeepAsset.Object;
     SkySphereMesh = SkySphereAsset.Object;
     MeshyHubHutMesh = MeshyHubHutAsset.Object;
+    MeshyHubWorkbenchMesh = MeshyHubWorkbenchAsset.Object;
+    MeshyHubBoatMesh = MeshyHubBoatAsset.Object;
     CoastalTerrainSand->SetStaticMesh(CoastalTerrainSandMesh);
     CoastalTerrainStone->SetStaticMesh(CoastalTerrainStoneMesh);
     CoastalTerrainDeep->SetStaticMesh(CoastalTerrainDeepMesh);
@@ -223,6 +229,7 @@ void ACoastalScene::BuildScene()
             FRotator(0.0f, 145.0f, 0.0f), FLinearColor(0.82f, 0.33f, 0.12f), TEXT("MaraApron"));
         BuildTraderHub();
         BuildHubSlice();
+        BuildMeshyHubHeroProps();
         BuildHubNature();
     }
 
@@ -632,9 +639,7 @@ void ACoastalScene::BuildSettlement()
     AddRockCluster(FVector(0.0f, 2950.0f, -120.0f), FVector(2500.0f, 350.0f, 560.0f), 37, false);
 
     BuildFishingHut(FVector(-1100.0f, -1650.0f, 150.0f), 18.0f, 1.0f);
-    BuildFishingHut(FVector(1250.0f, -2100.0f, 145.0f), -20.0f, 0.82f);
     BuildFishingHut(FVector(-1550.0f, 900.0f, 155.0f), 125.0f, 0.75f);
-    BuildBoat(FVector(1450.0f, 1250.0f, 130.0f), -28.0f, 0.9f);
 
     BuildRopeFence(FVector(-400.0f, 2600.0f, 110.0f), FVector(2500.0f, 2100.0f, 120.0f), 6);
     BuildRopeFence(FVector(-2600.0f, -2900.0f, 110.0f), FVector(-500.0f, -3200.0f, 105.0f), 5);
@@ -715,7 +720,7 @@ void ACoastalScene::BuildTraderHub()
 
 void ACoastalScene::BuildHubSlice()
 {
-    // These five components share world origin and centimetre units. They dress the existing settlement
+    // These three retained components share world origin and centimetre units. They dress the existing settlement
     // floor without adding collision or movement surfaces, so traversal remains owned by the validated scene.
     struct FHubSliceMesh
     {
@@ -724,8 +729,6 @@ void ACoastalScene::BuildHubSlice()
     };
     const FHubSliceMesh SliceMeshes[] = {
         { TEXT("Apron"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_Apron.SM_LT_HubSlice_Apron") },
-        { TEXT("WorkCluster"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_WorkCluster.SM_LT_HubSlice_WorkCluster") },
-        { TEXT("GoodsCluster"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_GoodsCluster.SM_LT_HubSlice_GoodsCluster") },
         { TEXT("MaritimeDetails"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_MaritimeDetails.SM_LT_HubSlice_MaritimeDetails") },
         { TEXT("GroundDressing"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_GroundDressing.SM_LT_HubSlice_GroundDressing") },
     };
@@ -752,24 +755,77 @@ void ACoastalScene::BuildHubSlice()
         Part->SetupAttachment(SceneRoot);
         Part->SetStaticMesh(LoadedMeshes[Index]);
         Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        Part->SetCastShadow(Index != 4); // Tiny ground scatter does not justify another dynamic shadow cluster.
+        Part->SetCastShadow(Index != 2); // Tiny ground scatter does not justify another dynamic shadow cluster.
         Part->ComponentTags.Add(TEXT("HubSliceMesh"));
         Part->SetRelativeTransform(FTransform::Identity);
-        // Bring the existing workbench and sorted trade goods into the first view.
-        // Their former peripheral placement left the playable apron visually empty.
-        if (Index == 1)
-        {
-            Part->SetRelativeLocation(FVector(100.0f, 400.0f, 0.0f));
-        }
-        else if (Index == 2)
-        {
-            Part->SetRelativeLocation(FVector(-550.0f, -750.0f, 0.0f));
-        }
         Part->RegisterComponent();
     }
 
     UE_LOG(LogTemp, Display, TEXT("LOW TIDE hub quality slice loaded: %d world-origin decorative meshes."),
         UE_ARRAY_COUNT(SliceMeshes));
+}
+
+void ACoastalScene::BuildMeshyHubHeroProps()
+{
+    if (!MeshyHubWorkbenchMesh || !MeshyHubBoatMesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LOW TIDE Meshy hub hero props unavailable; existing hub remains playable."));
+        return;
+    }
+
+    auto AddHeroVisual = [this](UStaticMesh* Mesh, FName Name, const FVector& Location, const FRotator& Rotation)
+    {
+        UStaticMeshComponent* Visual = NewObject<UStaticMeshComponent>(this, Name);
+        AddInstanceComponent(Visual);
+        Visual->SetupAttachment(SceneRoot);
+        Visual->SetStaticMesh(Mesh);
+        Visual->SetWorldLocationAndRotation(Location, Rotation);
+        Visual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Visual->SetCastShadow(true);
+        Visual->ComponentTags.Add(TEXT("MeshyHubHeroProp"));
+        Visual->RegisterComponent();
+        return Visual;
+    };
+
+    // The working face points back toward the spawn while the bench remains south of the departure ribbon.
+    UStaticMeshComponent* Workbench = AddHeroVisual(MeshyHubWorkbenchMesh, TEXT("MeshySalvageWorkbench"),
+        FVector(400.0f, -700.0f, 125.0f), FRotator(0.0f, 30.0f, 0.0f));
+    Workbench->ComponentTags.Add(TEXT("MeshyHubWorkbench"));
+
+    // This small under-worktop box supports readable collision without catching loose source props.
+    UBoxComponent* WorkbenchBody = NewObject<UBoxComponent>(this, TEXT("MeshySalvageWorkbenchBody"));
+    AddInstanceComponent(WorkbenchBody);
+    WorkbenchBody->SetupAttachment(Workbench);
+    WorkbenchBody->SetRelativeLocation(FVector(0.0f, 0.0f, 40.0f));
+    WorkbenchBody->SetBoxExtent(FVector(88.0f, 34.0f, 40.0f));
+    WorkbenchBody->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    WorkbenchBody->SetCollisionResponseToAllChannels(ECR_Ignore);
+    WorkbenchBody->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+    WorkbenchBody->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    WorkbenchBody->ComponentTags.Add(TEXT("MeshyHubWorkbenchCollision"));
+    WorkbenchBody->RegisterComponent();
+
+    // The hauled-up boat anchors the east shore. It stays static: there is no boating system or idle tick.
+    UStaticMeshComponent* Boat = AddHeroVisual(MeshyHubBoatMesh, TEXT("MeshySalvageBoat"),
+        FVector(2150.0f, -50.0f, 105.0f), FRotator(0.0f, -35.0f, 0.0f));
+    Boat->ComponentTags.Add(TEXT("MeshyHubBoat"));
+
+    const auto AddBoatBody = [this, Boat](FName Name, const FVector& Center, const FVector& Extent)
+    {
+        UBoxComponent* Body = NewObject<UBoxComponent>(this, Name);
+        AddInstanceComponent(Body);
+        Body->SetupAttachment(Boat);
+        Body->SetRelativeLocation(Center);
+        Body->SetBoxExtent(Extent);
+        Body->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        Body->SetCollisionResponseToAllChannels(ECR_Ignore);
+        Body->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+        Body->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+        Body->ComponentTags.Add(TEXT("MeshyHubBoatCollision"));
+        Body->RegisterComponent();
+    };
+    AddBoatBody(TEXT("MeshySalvageBoatHull"), FVector(0.0f, 0.0f, 42.0f), FVector(140.0f, 68.0f, 42.0f));
+    AddBoatBody(TEXT("MeshySalvageBoatBow"), FVector(-150.0f, 0.0f, 30.0f), FVector(45.0f, 42.0f, 30.0f));
 }
 
 void ACoastalScene::BuildHubNature()
@@ -785,7 +841,7 @@ void ACoastalScene::BuildHubNature()
     };
     const FNatureFamily Families[] = {
         { TEXT("BushFlowers"), TEXT("/Game/Generated/HubNature/Bush_Common_Flowers.Bush_Common_Flowers"), true, 1800, 6500,
-            { FTransform(FRotator(0, 20, 0), FVector(300, -800, 126), FVector(0.72f)),
+            { FTransform(FRotator(0, 20, 0), FVector(120, -1050, 126), FVector(0.72f)),
               FTransform(FRotator(0, 145, 0), FVector(1680, 620, 126), FVector(0.82f)) } },
         { TEXT("Fern"), TEXT("/Game/Generated/HubNature/Fern_1.Fern_1"), false, 1400, 5200,
             { FTransform(FRotator(0, -18, 0), FVector(145, -930, 126), FVector(0.14f)),
@@ -795,16 +851,19 @@ void ACoastalScene::BuildHubNature()
               FTransform(FRotator(0, 80, 0), FVector(520, -2520, 126), FVector(0.62f)),
               FTransform(FRotator(0, 155, 0), FVector(1760, 920, 126), FVector(0.68f)) } },
         { TEXT("GrassWispy"), TEXT("/Game/Generated/HubNature/Grass_Wispy_Tall.Grass_Wispy_Tall"), false, 1200, 4500,
-            { FTransform(FRotator(0, -55, 0), FVector(510, -890, 126), FVector(0.55f)),
-              FTransform(FRotator(0, 105, 0), FVector(720, -2710, 126), FVector(0.58f)) } },
+            { FTransform(FRotator(0, -55, 0), FVector(200, -1300, 126), FVector(0.55f)),
+              FTransform(FRotator(0, 105, 0), FVector(720, -2710, 126), FVector(0.58f)),
+              FTransform(FRotator(0, 48, 0), FVector(950, 330, 126), FVector(0.40f)) } },
         { TEXT("PlantBig"), TEXT("/Game/Generated/HubNature/Plant_1_Big.Plant_1_Big"), true, 1800, 6500,
             { FTransform(FRotator(0, 32, 0), FVector(-520, -1720, 126), FVector(0.38f)),
-              FTransform(FRotator(0, 170, 0), FVector(1750, 820, 126), FVector(0.32f)) } },
+              FTransform(FRotator(0, 170, 0), FVector(1750, 820, 126), FVector(0.32f)),
+              FTransform(FRotator(0, -24, 0), FVector(1100, 340, 126), FVector(0.20f)) } },
         { TEXT("Rock1"), TEXT("/Game/Generated/HubNature/Rock_Medium_1.Rock_Medium_1"), true, 2500, 9000,
             { FTransform(FRotator(0, 12, 0), FVector(-850, -2100, 120), FVector(0.62f)),
               FTransform(FRotator(0, 95, 0), FVector(2050, -2800, 118), FVector(0.50f)) } },
         { TEXT("Rock2"), TEXT("/Game/Generated/HubNature/Rock_Medium_2.Rock_Medium_2"), true, 2500, 9000,
-            { FTransform(FRotator(0, -35, 0), FVector(-1120, -1780, 120), FVector(0.56f)) } },
+            { FTransform(FRotator(0, -35, 0), FVector(-1120, -1780, 120), FVector(0.56f)),
+              FTransform(FRotator(0, 58, 0), FVector(1050, 250, 122), FVector(0.28f)) } },
         { TEXT("Rock3"), TEXT("/Game/Generated/HubNature/Rock_Medium_3.Rock_Medium_3"), true, 2500, 9000,
             { FTransform(FRotator(0, 130, 0), FVector(1950, 1080, 120), FVector(0.48f)) } },
         { TEXT("PathRock"), TEXT("/Game/Generated/HubNature/RockPath_Round_Wide.RockPath_Round_Wide"), false, 1800, 6000,
@@ -875,7 +934,7 @@ void ACoastalScene::BuildHubNature()
             }
         }
         const TArray<FVector> ClusterCenters = {
-            FVector(260, -820, 126), FVector(-620, -1860, 126),
+            FVector(-120, -1100, 126), FVector(-620, -1860, 126),
             FVector(1740, 820, 126), FVector(620, -2500, 126)
         };
         const bool bDenseLowFamily = FCString::Strcmp(Family.Name, TEXT("GrassCommon")) == 0

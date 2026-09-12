@@ -21,8 +21,14 @@ from mathutils import Matrix, Vector
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "Artifacts/MeshyHubReview"
 SOURCES = {
-    "Budka": ROOT / "SourceAssets/Generated/Budka/Budka.glb",
-    "Papug": ROOT / "SourceAssets/Generated/Papug/Papug.glb",
+    "Budka": {"path": ROOT / "SourceAssets/Generated/Budka/Budka.glb", "target_plan_m": 5.0,
+              "native_front": "UE +Y (source storefront is Blender -Y)"},
+    "Papug": {"path": ROOT / "SourceAssets/Generated/Papug/Papug.glb", "target_height_m": 1.40,
+              "native_front": "UE +Y (source bird face is Blender -Y)"},
+    "Lodka": {"path": ROOT / "SourceAssets/Generated/Lodka/Lodka.glb", "target_plan_m": 4.0,
+              "native_front": "bow UE -X (source bow is Blender -X)"},
+    "Verstak": {"path": ROOT / "SourceAssets/Generated/Verstak/Verstak.glb", "target_plan_m": 2.0,
+                "native_front": "working side UE +Y (source working side is Blender -Y)"},
 }
 
 
@@ -160,7 +166,8 @@ def render_preview(output, bounds):
     bpy.ops.render.render(write_still=True)
 
 
-def inspect(label, source, output_root, no_render):
+def inspect(label, spec, output_root, no_render):
+    source = spec["path"]
     if not source.is_file():
         raise FileNotFoundError(source)
     output = output_root / label
@@ -220,11 +227,9 @@ def inspect(label, source, output_root, no_render):
 
     # Meshy sources are Y-up glTF. Preserve every mesh/material and apply one
     # uniform scale to the common hierarchy, then bake a ground-centred pivot.
-    target_width = 5.0 if label == "Budka" else None
-    # Papug is a single unrigged mesh containing bird and full floor perch. The
-    # Director-approved 140 cm overall height puts its head near player eye level.
-    target_height = None if label == "Budka" else 1.40
-    scale = target_width / max(bounds["size"][0], bounds["size"][1]) if target_width else target_height / bounds["size"][2]
+    target_plan = spec.get("target_plan_m")
+    target_height = spec.get("target_height_m")
+    scale = target_plan / max(bounds["size"][0], bounds["size"][1]) if target_plan else target_height / bounds["size"][2]
     roots = [obj for obj in objects if obj.parent is None]
     for obj in roots:
         obj.scale *= scale
@@ -248,11 +253,12 @@ def inspect(label, source, output_root, no_render):
     )
     report["normalization"] = {
         "uniform_scale": scale,
-        "target": "5.0 m maximum plan width" if label == "Budka" else "1.40 m overall grounded height (~0.65-0.75 m bird body+tail)",
+        "target": (f"{target_plan:.2f} m maximum plan dimension" if target_plan else
+                   "1.40 m overall grounded height (~0.65-0.75 m bird body+tail)"),
         "normalized_bounds_world_m": combined_bounds(meshes),
         "pivot": "ground centre",
         "unreal_axes": "Blender +X becomes UE +X; Blender +Y becomes UE -Y; Blender +Z becomes UE +Z",
-        "native_front": "UE +Y (source storefront/bird face is Blender -Y)",
+        "native_front": spec["native_front"],
     }
     (output / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     if not no_render:
@@ -265,8 +271,11 @@ def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     output = Path(args[0]).resolve() if args and not args[0].startswith("--") else DEFAULT_OUTPUT
     no_render = "--no-render" in args
-    for label, source in SOURCES.items():
-        inspect(label, source, output, no_render)
+    requested = next((arg.split("=", 1)[1] for arg in args if arg.startswith("--only=")), None)
+    for label, spec in SOURCES.items():
+        if requested and label.lower() != requested.lower():
+            continue
+        inspect(label, spec, output, no_render)
 
 
 if __name__ == "__main__":
