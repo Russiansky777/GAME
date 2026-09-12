@@ -32,7 +32,7 @@ and 1040 cm/s sprinting; jumping uses a single 420 cm/s launch with restrained
 air control. Small terrain changes should be handled by automatic step-up, not
 used as a reason to jump around broken geometry.
 
-Speak to Mara to accept the expedition and start the tide. Follow the amber
+Use E at the jobs board to accept the expedition and start the tide. Follow the amber
 low-tide route to the signal logbook, then return to Mara. The shrine branch is
 an optional deeper-risk route for the rare artifact. As water rises, the low
 shortcut closes: follow the blue posts along the elevated escape route home.

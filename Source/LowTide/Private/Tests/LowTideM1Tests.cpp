@@ -14,6 +14,7 @@
 #include "GroundingPlinthActor.h"
 #include "LowTideCharacter.h"
 #include "LowTideGameMode.h"
+#include "JobBoardActor.h"
 #include "LowTideInventoryComponent.h"
 #include "PickupActor.h"
 #include "TideController.h"
@@ -157,16 +158,31 @@ bool FLowTideM1MissionTest::RunTest(const FString& Parameters)
     }
     TestFalse(TEXT("Default launch is the M1 slice"), GameMode->IsM05Fixture());
     ATraderActor* Mara = GameMode->GetSceneLayout().Mara;
+    AJobBoardActor* JobBoard = GameMode->GetJobBoard();
     TestNotNull(TEXT("Mara exists"), Mara);
-    if (!Mara)
+    TestNotNull(TEXT("Job board exists"), JobBoard);
+    if (!Mara || !JobBoard)
     {
         return false;
     }
 
+    TestTrue(TEXT("Job board offers the current expedition and reward"),
+        JobBoard->GetInteractionPrompt(TestWorld.Character).Contains(TEXT("Signal Station Logbook - 75 credits")));
+    TestWorld.Character->SetActorLocation(JobBoard->GetActorLocation() + FVector(600.0f, 0.0f, 0.0f));
+    TestFalse(TEXT("Job board rejects out-of-range interaction"), JobBoard->Interact(TestWorld.Character));
+
     TestWorld.Character->SetActorLocation(Mara->GetActorLocation());
-    TestTrue(TEXT("Mara interaction accepts the mission"), Mara->Interact(TestWorld.Character));
+    TestTrue(TEXT("Mara remains usable before mission acceptance"), Mara->Interact(TestWorld.Character));
+    TestEqual(TEXT("Mara does not accept jobs"), GameMode->GetMissionState(), EM1MissionState::NotAccepted);
+    TestWorld.Character->SetActorLocation(JobBoard->GetActorLocation());
+    TestTrue(TEXT("Job board interaction accepts the mission"), JobBoard->Interact(TestWorld.Character));
     TestEqual(TEXT("Mission enters logbook objective"), GameMode->GetMissionState(), EM1MissionState::FindLogbook);
     TestTrue(TEXT("Tide clock starts only after acceptance"), GameMode->GetTideController()->IsClockRunning());
+    GameMode->GetTideController()->Tick(1.0f);
+    const float RemainingAfterAcceptance = GameMode->GetTideController()->GetSecondsRemaining();
+    TestTrue(TEXT("Active job remains reviewable at the board"), JobBoard->Interact(TestWorld.Character));
+    TestEqual(TEXT("Repeated board use does not restart the tide clock"),
+        GameMode->GetTideController()->GetSecondsRemaining(), RemainingAfterAcceptance);
 
     APickupActor* Logbook = FindPickup(TestWorld.World, TEXT("signal_station_logbook"));
     APickupActor* Artifact = FindPickup(TestWorld.World, TEXT("singing_shard"));
@@ -242,9 +258,9 @@ bool FLowTideM1LivingTideTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Wet-exposure fixture banks protected evidence"), Inventory->TryAddProtected(TEXT("signal_station_logbook"), 1, InventoryReason));
     Inventory->AddCredits(19);
 
-    ATraderActor* Mara = Layout.Mara;
-    TestWorld.Character->SetActorLocation(Mara->GetActorLocation());
-    Mara->Interact(TestWorld.Character);
+    AJobBoardActor* JobBoard = GameMode->GetJobBoard();
+    TestWorld.Character->SetActorLocation(JobBoard->GetActorLocation());
+    JobBoard->Interact(TestWorld.Character);
     ATideController* Tide = GameMode->GetTideController();
     TestEqual(TEXT("Mission begins during comfortable low tide"), Tide->GetPhase(), ETidePhase::Low);
     TestTrue(TEXT("Lower shortcut begins open"), Tide->IsAccessOpen());
@@ -434,8 +450,8 @@ bool FLowTideM1InvalidGroundRecoveryTest::RunTest(const FString& Parameters)
     const FCoastalSceneLayout& Layout = GameMode->GetSceneLayout();
     ULowTideInventoryComponent* Inventory = Character->GetInventory();
     FString Reason;
-    Character->SetActorLocation(Layout.Mara->GetActorLocation());
-    TestTrue(TEXT("Invalid-ground fixture accepts the expedition"), Layout.Mara->Interact(Character));
+    Character->SetActorLocation(GameMode->GetJobBoard()->GetActorLocation());
+    TestTrue(TEXT("Invalid-ground fixture accepts the expedition"), GameMode->GetJobBoard()->Interact(Character));
     TestTrue(TEXT("Invalid-ground fixture adds expedition ordinary salvage"), Inventory->TryAdd(TEXT("copper_wire"), 1, Reason));
     TestTrue(TEXT("Invalid-ground fixture adds protected expedition evidence"), Inventory->TryAddProtected(TEXT("signal_station_logbook"), 1, Reason));
     Inventory->AddCredits(23);
@@ -502,8 +518,8 @@ bool FLowTideM1JumpContainmentTest::RunTest(const FString& Parameters)
     }
     const FCoastalSceneLayout& Layout = GameMode->GetSceneLayout();
     ATideController* Tide = GameMode->GetTideController();
-    Character->SetActorLocation(Layout.Mara->GetActorLocation());
-    TestTrue(TEXT("Jump-containment fixture accepts the expedition and starts the tide clock"), Layout.Mara->Interact(Character));
+    Character->SetActorLocation(GameMode->GetJobBoard()->GetActorLocation());
+    TestTrue(TEXT("Jump-containment fixture accepts the expedition and starts the tide clock"), GameMode->GetJobBoard()->Interact(Character));
     TestTrue(TEXT("Jump-containment fixture tide clock is running"), Tide->IsClockRunning());
     Tide->Tick(20.1f);
     Tide->Tick(Tide->GetSecondsRemaining() + 0.1f);
@@ -597,9 +613,9 @@ bool FLowTideM1PhenomenonRecoveryTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Prior ordinary stock exists"), Inventory->TryAdd(TEXT("scrap_metal"), 1, Reason));
     Inventory->AddCredits(12);
 
-    ATraderActor* Mara = GameMode->GetSceneLayout().Mara;
-    Character->SetActorLocation(Mara->GetActorLocation());
-    Mara->Interact(Character);
+    AJobBoardActor* JobBoard = GameMode->GetJobBoard();
+    Character->SetActorLocation(JobBoard->GetActorLocation());
+    JobBoard->Interact(Character);
     TestTrue(TEXT("Current expedition ordinary salvage added"), Inventory->TryAdd(TEXT("scrap_metal"), 1, Reason));
     TestTrue(TEXT("Protected mission objective collected"), Collect(Character, FindPickup(TestWorld.World, TEXT("signal_station_logbook"))));
     TestTrue(TEXT("Rare artifact collected"), Collect(Character, FindPickup(TestWorld.World, TEXT("singing_shard"))));

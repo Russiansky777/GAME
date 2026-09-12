@@ -1,0 +1,295 @@
+{
+  "assetFamily": "LOW TIDE Hub Slice Dressing",
+  "generator": "Scripts/GenerateHubSlice.py",
+  "authorship": "Project-authored procedural geometry; no external assets or textures.",
+  "units": "cm",
+  "worldOrigin": true,
+  "groundTopZ": 126.0,
+  "objImport": {
+    "preReflectedY": true,
+    "importUniformScale": 1,
+    "combineMeshes": true,
+    "generateCollision": false,
+    "importMaterials": false
+  },
+  "palette": {
+    "DarkWood": [
+      0.16,
+      0.065,
+      0.025,
+      1
+    ],
+    "WarmWood": [
+      0.48,
+      0.2,
+      0.07,
+      1
+    ],
+    "TealPaint": [
+      0.035,
+      0.26,
+      0.27,
+      1
+    ],
+    "Cream": [
+      0.86,
+      0.66,
+      0.38,
+      1
+    ],
+    "Rust": [
+      0.62,
+      0.13,
+      0.045,
+      1
+    ],
+    "Brass": [
+      0.62,
+      0.34,
+      0.07,
+      1
+    ],
+    "Rope": [
+      0.48,
+      0.3,
+      0.12,
+      1
+    ],
+    "GlassGreen": [
+      0.035,
+      0.3,
+      0.19,
+      1
+    ],
+    "Shell": [
+      0.86,
+      0.48,
+      0.28,
+      1
+    ]
+  },
+  "meshes": [
+    {
+      "name": "SM_LT_HubSlice_Apron",
+      "obj": "SM_LT_HubSlice_Apron.obj",
+      "intendedUnrealAsset": "/Game/Generated/HubSlice/SM_LT_HubSlice_Apron",
+      "collision": false,
+      "worldOrigin": true,
+      "localOrigin": false,
+      "suggestedPlacement": null,
+      "units": "cm",
+      "groundTopZ": 126.0,
+      "role": "deck",
+      "castShadows": true,
+      "materials": [
+        "WarmWood",
+        "DarkWood",
+        "Brass",
+        "TealPaint"
+      ],
+      "vertices": 7068,
+      "triangles": 13102,
+      "boundsCm": {
+        "min": [
+          -624.68,
+          -1718.57,
+          117.0
+        ],
+        "max": [
+          1922.48,
+          614.76,
+          149.75
+        ]
+      }
+    },
+    {
+      "name": "SM_LT_HubSlice_WorkCluster",
+      "obj": "SM_LT_HubSlice_WorkCluster.obj",
+      "intendedUnrealAsset": "/Game/Generated/HubSlice/SM_LT_HubSlice_WorkCluster",
+      "collision": false,
+      "worldOrigin": true,
+      "localOrigin": false,
+      "suggestedPlacement": null,
+      "units": "cm",
+      "groundTopZ": 126.0,
+      "role": "working-clutter",
+      "castShadows": true,
+      "materials": [
+        "WarmWood",
+        "DarkWood",
+        "Cream",
+        "Brass",
+        "TealPaint",
+        "Rope"
+      ],
+      "vertices": 1370,
+      "triangles": 2588,
+      "boundsCm": {
+        "min": [
+          -60.12,
+          -1125.23,
+          122.0
+        ],
+        "max": [
+          362.38,
+          -803.48,
+          267.5
+        ]
+      }
+    },
+    {
+      "name": "SM_LT_HubSlice_GoodsCluster",
+      "obj": "SM_LT_HubSlice_GoodsCluster.obj",
+      "intendedUnrealAsset": "/Game/Generated/HubSlice/SM_LT_HubSlice_GoodsCluster",
+      "collision": false,
+      "worldOrigin": true,
+      "localOrigin": false,
+      "suggestedPlacement": null,
+      "units": "cm",
+      "groundTopZ": 126.0,
+      "role": "sorted-goods",
+      "castShadows": true,
+      "materials": [
+        "Cream",
+        "TealPaint",
+        "DarkWood",
+        "WarmWood",
+        "Brass",
+        "Rope",
+        "Shell",
+        "GlassGreen",
+        "Rust"
+      ],
+      "vertices": 3458,
+      "triangles": 6648,
+      "boundsCm": {
+        "min": [
+          1592.5,
+          409.0,
+          125.0
+        ],
+        "max": [
+          2357.11,
+          863.0,
+          268.0
+        ]
+      }
+    },
+    {
+      "name": "SM_LT_HubSlice_MaritimeDetails",
+      "obj": "SM_LT_HubSlice_MaritimeDetails.obj",
+      "intendedUnrealAsset": "/Game/Generated/HubSlice/SM_LT_HubSlice_MaritimeDetails",
+      "collision": false,
+      "worldOrigin": true,
+      "localOrigin": false,
+      "suggestedPlacement": null,
+      "units": "cm",
+      "groundTopZ": 126.0,
+      "role": "nautical-identity",
+      "castShadows": true,
+      "materials": [
+        "DarkWood",
+        "WarmWood",
+        "Rope",
+        "Cream",
+        "TealPaint",
+        "Brass"
+      ],
+      "vertices": 702,
+      "triangles": 1220,
+      "boundsCm": {
+        "min": [
+          -580.7,
+          -2732.09,
+          106.0
+        ],
+        "max": [
+          1384.82,
+          -1475.55,
+          397.0
+        ]
+      }
+    },
+    {
+      "name": "SM_LT_HubSlice_GroundDressing",
+      "obj": "SM_LT_HubSlice_GroundDressing.obj",
+      "intendedUnrealAsset": "/Game/Generated/HubSlice/SM_LT_HubSlice_GroundDressing",
+      "collision": false,
+      "worldOrigin": true,
+      "localOrigin": false,
+      "suggestedPlacement": null,
+      "units": "cm",
+      "groundTopZ": 126.0,
+      "role": "edge-dressing",
+      "castShadows": false,
+      "materials": [
+        "DarkWood",
+        "Shell",
+        "Cream"
+      ],
+      "vertices": 2172,
+      "triangles": 4192,
+      "boundsCm": {
+        "min": [
+          -789.24,
+          -2738.04,
+          110.09
+        ],
+        "max": [
+          2368.38,
+          -1308.0,
+          153.91
+        ]
+      }
+    },
+    {
+      "name": "SM_LT_HubSlice_JobBoard",
+      "obj": "SM_LT_HubSlice_JobBoard.obj",
+      "intendedUnrealAsset": "/Game/Generated/HubSlice/SM_LT_HubSlice_JobBoard",
+      "collision": false,
+      "worldOrigin": false,
+      "localOrigin": true,
+      "suggestedPlacement": {
+        "worldLocationCm": [
+          1450,
+          170,
+          125
+        ],
+        "yawDegrees": 7,
+        "front": "local -X"
+      },
+      "units": "cm",
+      "groundTopZ": 126.0,
+      "role": "interactive hero jobs board",
+      "castShadows": true,
+      "materials": [
+        "DarkWood",
+        "Brass",
+        "WarmWood",
+        "Cream",
+        "TealPaint",
+        "Rust",
+        "Shell",
+        "Rope"
+      ],
+      "vertices": 2328,
+      "triangles": 4348,
+      "boundsCm": {
+        "min": [
+          -94.0,
+          -198.54,
+          0.0
+        ],
+        "max": [
+          34.0,
+          160.5,
+          329.2
+        ]
+      }
+    }
+  ],
+  "totalTriangles": 32098,
+  "triangleBudget": 50000,
+  "withinBudget": true,
+  "routeClearance": "Sizeable props remain outside both 900 cm route corridors and the direct Mara front-center approach."
+}

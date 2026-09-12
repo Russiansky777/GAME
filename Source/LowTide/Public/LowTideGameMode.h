@@ -12,6 +12,7 @@ class ACoastalAudio;
 class ACoastalDressing;
 class ACoastalScene;
 class AGroundingPlinthActor;
+class AJobBoardActor;
 class AStoryClueActor;
 class ALowTideCharacter;
 class ATideController;
@@ -44,6 +45,8 @@ public:
     const FString& GetCatalogError() const { return CatalogError; }
     void BeginExpeditionIfNeeded(const ALowTideCharacter* Character);
     bool HandleMaraInteraction(ALowTideCharacter* Character);
+    bool HandleJobBoardInteraction(ALowTideCharacter* Character);
+    AJobBoardActor* GetJobBoard() const { return JobBoard; }
     void NotifyItemCollected(ALowTideCharacter* Character, FName ItemId);
     void NotifyItemSold(FName ItemId);
     bool GroundArtifact(ALowTideCharacter* Character);
@@ -101,6 +104,9 @@ private:
 
     UPROPERTY()
     TObjectPtr<ACoastalDressing> CoastalDressing;
+
+    UPROPERTY()
+    TObjectPtr<AJobBoardActor> JobBoard;
 
     UPROPERTY()
     TArray<TObjectPtr<AGroundingPlinthActor>> GroundingPlinths;

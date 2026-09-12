@@ -203,6 +203,48 @@ def custom_xz_prism(name, points_xz, y0, y1, mat, component, bevel=1.2):
     return tag(obj, component, mat)
 
 
+def make_fan_shell(name, center, width, height, depth, mat, component):
+    """Closed bulged clam shell facing local -X, with raised radial ribs."""
+    cx, cy, base_z = center
+    rings, segments = 3, 10
+    verts = [(cx - depth, cy, base_z + height * 0.22)]
+    for ring in range(1, rings + 1):
+        r = ring / rings
+        for j in range(segments + 1):
+            angle = math.pi * j / segments
+            verts.append((cx - depth * (1.0 - r * r),
+                          cy + math.cos(angle) * width * r,
+                          base_z + math.sin(angle) * height * r))
+    back_center = len(verts)
+    verts.append((cx + 1.5, cy, base_z + height * 0.28))
+    faces = [(0, 1 + j, 2 + j) for j in range(segments)]
+    for ring in range(1, rings):
+        a0 = 1 + (ring - 1) * (segments + 1)
+        b0 = 1 + ring * (segments + 1)
+        for j in range(segments):
+            faces.append((a0 + j, b0 + j, b0 + j + 1, a0 + j + 1))
+    outer = 1 + (rings - 1) * (segments + 1)
+    for j in range(segments):
+        faces.append((back_center, outer + j + 1, outer + j))
+    mesh = bpy.data.meshes.new(name + "Mesh")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    apply_bevel(obj, 0.8, 1)
+    tag(obj, component, mat)
+    for j in range(1, segments, 2):
+        angle = math.pi * j / segments
+        points = []
+        for step in range(5):
+            r = step / 4
+            points.append((cx - depth * (1.0 - r * r) - 1.2,
+                           cy + math.cos(angle) * width * r,
+                           base_z + height * 0.22 * (1 - r) + math.sin(angle) * height * r))
+        curve_tube(name + "Rib", points, 1.15, "Rope", component)
+    return obj
+
+
 def sloped_beam(name, start, end, width, depth, mat, component):
     start_v = Vector(start)
     end_v = Vector(end)
@@ -226,6 +268,15 @@ def build_structure():
         for y in (-312.0, 312.0):
             box("MainPost", (x, y, 257), (30, 30, 514), "DarkWood", comp, bevel=4.5)
             box("PostFoot", (x, y, 18), (48, 48, 36), "Brass", comp, bevel=5.0)
+    # Front posts carry readable hand-work: inset grain strips, paint scars and forged nails.
+    for y in (-312.0, 312.0):
+        for z, span in ((105, 58), (205, 72), (330, 64)):
+            box("FrontPostGrain", (-71.0, y + (z % 3 - 1) * 3, z), (1.5, 3.5, span),
+                "Rope" if z == 205 else "DarkWood", comp,
+                rotation=(0, math.radians((z % 7) - 3), 0), bevel=0.35)
+        for z in (62, 158, 265, 410):
+            cylinder("FrontPostNail", (-72.5, y, z), 3.5, 3.0, "Brass", comp,
+                     vertices=10, rotation=(0, math.pi / 2, 0), bevel=0.7)
     # Rear wall: individually varied cream planks, teal horizontal binding rails.
     plank_w = 54.0
     for i in range(11):
@@ -294,6 +345,11 @@ def build_roof():
     for x in (-140, 500):
         points = [(x, y, roof_height(y) - 8) for y in range(-370, 371, 40)]
         curve_tube("CurvedEave", points, 8.5, "WeatheredCream", comp)
+    # Short contrasting scars break the fascia's machine-perfect edge without visual noise.
+    for y, z in ((-275, roof_height(-275)), (-155, roof_height(-155)),
+                 (115, roof_height(115)), (255, roof_height(255))):
+        box("FasciaWear", (-150.2, y, z - 8), (2.5, 42, 5), "DarkWood", comp,
+            rotation=(0, 0, math.radians((y % 5) - 2)), bevel=1.0)
     box("RidgeCap", (180, 0, 663), (660, 25, 25), "Brass", comp, bevel=5)
     # End-grain pegs along the front eave.
     for y in (-315, -210, -105, 105, 210, 315):
@@ -372,6 +428,14 @@ def build_counter():
     for side in (-1, 1):
         y = side * 178
         box("CounterTop", (-92, y, 118), (112, 205, 18), "DarkWood", comp, bevel=5)
+        # Pale grain scratches, worn paint edge, and nailheads read clearly from the approach.
+        for yy in (-54, 0, 54):
+            box("CounterGrain", (-95, y + yy, 127.6), (72, 2.0, 1.4),
+                "WeatheredCream", comp, rotation=(0, 0, math.radians(side * 4)), bevel=0.3)
+        box("CounterEdgeWear", (-150, y, 117), (2.5, 146, 7), "RustCanvas", comp, bevel=1.0)
+        for yy in (-78, 78):
+            cylinder("CounterNail", (-120, y + yy, 129), 3.0, 2.2, "Brass", comp,
+                     vertices=10, bevel=0.6)
         box("CounterFascia", (-92, y, 70), (20, 190, 80), "TealPaint", comp, bevel=3.5)
         box("CounterOuterPost", (-92, side * 279, 60), (28, 28, 120), "DarkWood", comp, bevel=4)
         box("CounterInnerPost", (-92, side * 70, 60), (24, 24, 120), "WeatheredCream", comp, bevel=3)
@@ -386,6 +450,27 @@ def build_counter():
     for y, z, mat in ((-135, 365, "Brass"), (-45, 360, "TealPaint"), (65, 363, "Brass"), (145, 361, "RustCanvas")):
         cylinder("ShelfSalvage", (400, y, z), 19, 30, mat, comp, vertices=12,
                  rotation=(0, math.pi / 2, 0), bevel=2)
+    # Merchandise is grouped on the outer bays; the central Y +/-66 interaction opening stays clear.
+    for side in (-1, 1):
+        by = side * 190
+        # Green sea-glass bottles with brass necks.
+        for j in range(3):
+            yy = by + side * (j - 1) * 28
+            cylinder("CounterBottle", (-118, yy, 149 + (j % 2) * 5), 10, 40,
+                     "TealPaint", comp, vertices=12, bevel=2)
+            cylinder("BottleNeck", (-118, yy, 174 + (j % 2) * 5), 5, 15,
+                     "Brass", comp, vertices=10, bevel=1)
+        # Smooth nested shells and a tied bundle of salvage tools.
+        for j in range(3):
+            yy = side * (125 + j * 38)
+            make_fan_shell("CounterClam", (-143, yy, 130), 13 + j * 2,
+                           18 + j * 2, 7, "CreamCanvas", comp)
+        for j in range(3):
+            box("BundledTool", (-112 + j * 8, side * 260, 151), (58, 6, 6),
+                "Brass" if j == 1 else "WeatheredCream", comp,
+                rotation=(0, math.radians(-8 + j * 8), math.radians(side * 8)), bevel=2)
+        torus("ToolBinding", (-112, side * 260, 151), 11, 3, "Rope", comp,
+              rotation=(math.pi / 2, 0, 0), major_segments=14, minor_segments=5)
 
 
 def build_sign():
@@ -510,6 +595,23 @@ def build_dressing():
                 cylinder("NetKnot", (70 + j * 48, y0 + 18 + (j % 2) * 5, 92 + k * 45),
                          2.4, 4, "Rope", nautical_comp, vertices=8,
                          rotation=(math.pi / 2, 0, 0), bevel=0.0)
+    # A second, looser net layer hangs across the outer front-right bay, visible on approach.
+    # It stops well above the counter and never crosses the center opening.
+    for j in range(5):
+        y = 112 + j * 40
+        curve_tube("FrontNetDrop", [(-73, y, 432), (-88, y + 8, 390),
+                                     (-80, y - 5, 345), (-72, y, 302)],
+                   1.7, "Rope", nautical_comp)
+    for k in range(4):
+        z = 318 + k * 32
+        curve_tube("FrontNetCross", [(-77, 108, z), (-91, 190, z - 10),
+                                      (-78, 274, z + 2)],
+                   1.6, "Rope", nautical_comp)
+    for y, z in ((132, 360), (205, 328), (265, 392)):
+        torus("NetSalvageRing", (-94, y, z), 12, 3.5, "Brass", nautical_comp,
+              rotation=(0, math.pi / 2, 0), major_segments=16, minor_segments=6)
+        curve_tube("NetSalvageTag", [(-95, y, z - 12), (-97, y + 4, z - 31)],
+                   2.2, "RustCanvas", nautical_comp)
 
 
 def build_anchor(comp):

@@ -35,7 +35,7 @@ FString ATraderActor::GetInteractionPrompt(const AActor* Interactor) const
         {
             switch (GameMode->GetMissionState())
             {
-            case EM1MissionState::NotAccepted: return TEXT("[E] Ask Mara about the signal station");
+            case EM1MissionState::NotAccepted: return TEXT("[E] Trade with Mara - jobs are on the board");
             case EM1MissionState::ReturnToMara: return TEXT("[E] Give Mara the Signal Station Logbook");
             default: break;
             }

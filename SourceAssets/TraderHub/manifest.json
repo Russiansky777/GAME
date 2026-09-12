@@ -170,6 +170,7 @@
       "materials": [
         "DarkWood",
         "Brass",
+        "Rope",
         "WeatheredCream",
         "TealPaint"
       ],
@@ -228,11 +229,12 @@
           675.5
         ]
       },
-      "vertices": 3660,
-      "triangles": 6964,
+      "vertices": 4380,
+      "triangles": 8332,
       "materialSlots": [
         "DarkWood",
         "Brass",
+        "Rope",
         "WeatheredCream",
         "TealPaint"
       ],
@@ -321,10 +323,12 @@
       "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Counter",
       "materials": [
         "DarkWood",
-        "TealPaint",
         "WeatheredCream",
+        "RustCanvas",
         "Brass",
-        "RustCanvas"
+        "TealPaint",
+        "CreamCanvas",
+        "Rope"
       ],
       "sourceFile": "SM_LT_TraderHub_Counter.obj",
       "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Counter",
@@ -335,7 +339,7 @@
       ],
       "bounds": {
         "min": [
-          -148.0,
+          -152.34,
           -314.5,
           0.0
         ],
@@ -347,7 +351,7 @@
       },
       "boundsUnrealImported": {
         "min": [
-          -148.0,
+          -152.34,
           -314.5,
           0.0
         ],
@@ -359,7 +363,7 @@
       },
       "boundsObjPreReflected": {
         "min": [
-          -148.0,
+          -152.34,
           -314.5,
           0.0
         ],
@@ -371,7 +375,7 @@
       },
       "boundsCmAuthored": {
         "min": [
-          -148.0,
+          -152.34,
           -314.5,
           0.0
         ],
@@ -381,14 +385,16 @@
           384.0
         ]
       },
-      "vertices": 592,
-      "triangles": 1112,
+      "vertices": 3900,
+      "triangles": 7176,
       "materialSlots": [
         "DarkWood",
-        "TealPaint",
         "WeatheredCream",
+        "RustCanvas",
         "Brass",
-        "RustCanvas"
+        "TealPaint",
+        "CreamCanvas",
+        "Rope"
       ],
       "collision": "none; import as non-colliding dressing"
     },
@@ -473,7 +479,8 @@
       "asset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Nautical",
       "materials": [
         "Rope",
-        "Brass"
+        "Brass",
+        "RustCanvas"
       ],
       "sourceFile": "SM_LT_TraderHub_Nautical.obj",
       "intendedUnrealAsset": "/Game/Generated/TraderHub/SM_LT_TraderHub_Nautical",
@@ -484,57 +491,58 @@
       ],
       "bounds": {
         "min": [
-          67.6,
+          -98.97,
           -374.44,
           1.01
         ],
         "max": [
           331.17,
           331.31,
-          319.4
+          432.55
         ]
       },
       "boundsUnrealImported": {
         "min": [
-          67.6,
+          -98.97,
           -374.44,
           1.01
         ],
         "max": [
           331.17,
           331.31,
-          319.4
+          432.55
         ]
       },
       "boundsObjPreReflected": {
         "min": [
-          67.6,
+          -98.97,
           -331.31,
           1.01
         ],
         "max": [
           331.17,
           374.44,
-          319.4
+          432.55
         ]
       },
       "boundsCmAuthored": {
         "min": [
-          67.6,
+          -98.97,
           -374.44,
           1.01
         ],
         "max": [
           331.17,
           331.31,
-          319.4
+          432.55
         ]
       },
-      "vertices": 1796,
-      "triangles": 3340,
+      "vertices": 2468,
+      "triangles": 4540,
       "materialSlots": [
         "Rope",
-        "Brass"
+        "Brass",
+        "RustCanvas"
       ],
       "collision": "none; import as non-colliding dressing"
     },
@@ -695,7 +703,7 @@
       "collision": "none; import as non-colliding dressing"
     }
   ],
-  "totalTriangles": 25144,
+  "totalTriangles": 33776,
   "triangleBudget": {
     "target": 40000,
     "withinBudget": true

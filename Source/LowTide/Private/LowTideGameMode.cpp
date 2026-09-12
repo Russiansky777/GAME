@@ -19,6 +19,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GroundingPlinthActor.h"
+#include "JobBoardActor.h"
 #include "LowTideCharacter.h"
 #include "LowTideHUD.h"
 #include "LowTideInventoryComponent.h"
@@ -360,6 +361,8 @@ void ALowTideGameMode::BuildM1Slice()
     }
     CoastalScene->BuildScene();
     SceneLayout = CoastalScene->GetLayout();
+    JobBoard = GetWorld()->SpawnActor<AJobBoardActor>(FVector(1450.0f, 170.0f, 125.0f),
+        FRotator(0.0f, 7.0f, 0.0f), Parameters);
     CoastalDressing = GetWorld()->SpawnActor<ACoastalDressing>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters);
     if (CoastalDressing)
     {
@@ -374,6 +377,9 @@ void ALowTideGameMode::BuildM1Slice()
                 ? (SceneLayout.Mara->GetActorLocation() - SceneLayout.PlayerStart).Rotation()
                 : FRotator::ZeroRotator;
             ShoreView.Pitch = 0.0f;
+            // Frame the shop on the left and the expedition departure on the right.
+            // This is only the initial composition; recovery and route anchors are unchanged.
+            ShoreView.Yaw = -30.0f;
             ShoreView.Roll = 0.0f;
             ExistingCharacter->SetActorLocationAndRotation(SceneLayout.PlayerStart, ShoreView, false, nullptr, ETeleportType::TeleportPhysics);
             ExistingCharacter->GetCharacterMovement()->StopMovementImmediately();
@@ -587,7 +593,9 @@ void ALowTideGameMode::BeginReviewCapture(const FString& CommandLineSwitch)
         bReviewCaptureRequested = true;
         bReviewCaptureCompleted = false;
         bReviewCaptureDispatched = false;
-        ReviewCaptureSettleCountdown = ReviewCaptureSettleDelaySeconds;
+        float RequestedCaptureDelay = ReviewCaptureSettleDelaySeconds;
+        FParse::Value(FCommandLine::Get(), TEXT("-M1ReviewCaptureDelay="), RequestedCaptureDelay);
+        ReviewCaptureSettleCountdown = FMath::Clamp(RequestedCaptureDelay, 3.0f, 60.0f);
         ReviewCaptureFallbackSeconds = 0.0f;
     }
 }
@@ -754,14 +762,8 @@ bool ALowTideGameMode::HandleMaraInteraction(ALowTideCharacter* Character)
     }
     if (MissionState == EM1MissionState::NotAccepted)
     {
-        MissionState = EM1MissionState::FindLogbook;
-        BeginExpeditionIfNeeded(Character);
-        SpawnM1Pickups();
-        if (TideController)
-        {
-            TideController->StartClock();
-        }
-        Character->ShowFeedback(TEXT("Mara: Recover the signal station logbook. Low tide is stable; the blue ridge remains safe if the lower shortcut floods."), 9.0f);
+        Character->OpenTrader(SceneLayout.Mara);
+        Character->ShowFeedback(TEXT("Mara: Expedition jobs are posted on the board. Bring salvage back here when you return."), 7.0f);
         return true;
     }
     if (MissionState == EM1MissionState::ReturnToMara
@@ -779,6 +781,39 @@ bool ALowTideGameMode::HandleMaraInteraction(ALowTideCharacter* Character)
     Character->ShowFeedback(MissionState == EM1MissionState::FindLogbook
         ? TEXT("Mara: Follow the amber station markers. The blue ridge is the return route. I can still buy salvage.")
         : TEXT("Mara buys salvage one piece at a time. Keep or sell the Singing Shard; either choice is yours."), 7.0f);
+    return true;
+}
+
+bool ALowTideGameMode::HandleJobBoardInteraction(ALowTideCharacter* Character)
+{
+    if (!Character || !JobBoard
+        || FVector::DistSquared(JobBoard->GetActorLocation(), Character->GetActorLocation()) > FMath::Square(475.0f))
+    {
+        return false;
+    }
+    if (CoastalAudio)
+    {
+        CoastalAudio->PlayCue(ECoastalAudioCue::Interaction);
+    }
+    Character->CloseMenus();
+    if (MissionState == EM1MissionState::NotAccepted)
+    {
+        MissionState = EM1MissionState::FindLogbook;
+        BeginExpeditionIfNeeded(Character);
+        SpawnM1Pickups();
+        if (TideController)
+        {
+            TideController->StartClock();
+        }
+        Character->ShowFeedback(TEXT("Job accepted from board: recover the Signal Station Logbook. Reward: 75 credits."), 9.0f);
+        return true;
+    }
+    const FString BoardStatus = MissionState == EM1MissionState::Complete
+        ? TEXT("COMPLETED: Signal Station Logbook - paid 75 credits.")
+        : MissionState == EM1MissionState::ReturnToMara
+            ? TEXT("JOB UPDATE: Logbook secured. Return it to Mara for 75 credits.")
+            : TEXT("ACTIVE JOB: Recover the Signal Station Logbook. Follow the amber markers.");
+    Character->ShowFeedback(BoardStatus, 7.0f);
     return true;
 }
 
@@ -956,7 +991,7 @@ FString ALowTideGameMode::GetObjectiveText() const
     switch (MissionState)
     {
     case EM1MissionState::NotAccepted:
-        return TEXT("MISSION: Speak with Mara at the striped salvage shop.");
+        return TEXT("NEW JOB: Check the jobs board at the salvage outpost.");
     case EM1MissionState::FindLogbook:
         return TEXT("OBJECTIVE: Follow amber markers to the signal station and recover its logbook.");
     case EM1MissionState::ReturnToMara:

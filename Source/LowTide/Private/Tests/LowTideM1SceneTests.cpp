@@ -11,6 +11,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "LowTideGameMode.h"
+#include "JobBoardActor.h"
 #include "TraderActor.h"
 
 namespace
@@ -115,13 +116,22 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         }
         TArray<UHierarchicalInstancedStaticMeshComponent*> InstancedMeshes;
         Scene->GetComponents<UHierarchicalInstancedStaticMeshComponent>(InstancedMeshes);
+        int32 HubNatureFamilies = 0;
         for (const UHierarchicalInstancedStaticMeshComponent* Mesh : InstancedMeshes)
         {
             if (Mesh && Mesh->ComponentHasTag(TEXT("M1Boundary")))
             {
                 TaggedBoundaryCount += Mesh->GetInstanceCount();
             }
+            if (Mesh && Mesh->ComponentHasTag(TEXT("HubNature")))
+            {
+                ++HubNatureFamilies;
+                TestTrue(TEXT("Every curated hub nature family has placed instances"), Mesh->GetInstanceCount() > 0);
+                TestTrue(TEXT("Curated hub nature remains decorative"),
+                    Mesh->GetCollisionEnabled() == ECollisionEnabled::NoCollision);
+            }
         }
+        TestEqual(TEXT("All ten curated CC0 hub nature families load"), HubNatureFamilies, 10);
     }
     TestTrue(TEXT("Every route and the settlement have a substantial tagged backup perimeter"), TaggedBoundaryCount >= 50);
 
@@ -219,6 +229,21 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
     }
 
     TestNotNull(TEXT("Mara is returned by the scene layout"), Layout.Mara.Get());
+    TestNotNull(TEXT("Mission board is spawned as a separate hub interaction"), GameMode->GetJobBoard());
+    if (AJobBoardActor* Board = GameMode->GetJobBoard())
+    {
+        const UStaticMeshComponent* BoardMesh = Board->FindComponentByClass<UStaticMeshComponent>();
+        TestTrue(TEXT("Mission board loads its authored hero mesh"), BoardMesh && BoardMesh->GetStaticMesh());
+        TestTrue(TEXT("Mission board owns physical interaction backing"),
+            Board->FindComponentByClass<UBoxComponent>() != nullptr);
+        FHitResult BoardHit;
+        FCollisionQueryParams BoardQuery(SCENE_QUERY_STAT(LowTideJobBoardSightline), false);
+        const FVector BoardCenter = Board->GetActorLocation() + FVector(0.0f, 0.0f, 175.0f);
+        const FVector BoardFront = Board->GetActorForwardVector() * -300.0f;
+        TestTrue(TEXT("Mission board is visible from its local front approach"),
+            World->LineTraceSingleByChannel(BoardHit, BoardCenter + BoardFront, BoardCenter,
+                ECC_Visibility, BoardQuery) && BoardHit.GetActor() == Board);
+    }
     ACoastalScene* TraderHubScene = nullptr;
     for (TActorIterator<ACoastalScene> It(World); It; ++It)
     {
@@ -230,11 +255,14 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
     {
         TInlineComponentArray<UStaticMeshComponent*> HubMeshes(TraderHubScene);
         int32 TraderHubMeshCount = 0;
+        int32 HubSliceMeshCount = 0;
         for (const UStaticMeshComponent* Mesh : HubMeshes)
         {
             TraderHubMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("TraderHubMesh")) ? 1 : 0;
+            HubSliceMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("HubSliceMesh")) ? 1 : 0;
         }
         TestEqual(TEXT("Approved trader hub loads all seven authored meshes"), TraderHubMeshCount, 7);
+        TestEqual(TEXT("Hub quality slice loads all five world-origin dressing meshes"), HubSliceMeshCount, 5);
 
         TInlineComponentArray<UBoxComponent*> HubBoxes(TraderHubScene);
         int32 TraderHubProxyCount = 0;

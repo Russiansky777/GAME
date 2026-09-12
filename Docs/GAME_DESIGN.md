@@ -4,7 +4,7 @@
 
 One compact authored expedition, approximately 8–12 minutes on a normal first playthrough. The five acceptance pillars are discovery, meaningful loot, voluntary risk, a geography-changing tide and mystery. This is a playable-content target, not merely a longer countdown.
 
-Provisional mission: Mara asks for the drowned signal station's logbook. Follow a readable coastal route through a wreck and exposed ruins; retrieve the protected logbook and uncover an impossible reply recorded before transmission. Returning with the main objective awards a one-time payment. Names, story details and rewards are reversible and do not establish major lore.
+Provisional mission: the hub jobs board posts Mara's request for the drowned signal station's logbook. Accept the current expedition at the board, follow a readable coastal route through a wreck and exposed ruins, retrieve the protected logbook and uncover an impossible reply recorded before transmission. Return it to Mara for a one-time payment; she remains the salvage trader. The board is the visible mission-acquisition anchor, with one reversible job rather than a general quest framework. Names, story details and rewards are reversible and do not establish major lore.
 
 The main objective has comfortable timing. An optional deeper shrine advertises a substantially more valuable singing artifact and its danger before acquisition. Carrying it awakens one non-combat phenomenon: it follows movement, so stopping and using marked grounding refuges provide counterplay. The player may escape with it and sell or retain it; no speculative future-use mechanic is promised. Keep the catalog small and distinct: common salvage, rare valuable loot and protected evidence.
 

@@ -145,8 +145,8 @@ def import_mesh(entry, materials):
         fail("{} imported {} material slots; manifest declares {}".format(
             entry["asset"], slot_count, len(entry["materials"])))
     imported_names = [str(slot.get_editor_property("material_slot_name")) for slot in slots]
-    if imported_names != entry["materials"]:
-        fail("{} imported material slots {}; manifest declares {}".format(
+    if len(set(imported_names)) != len(imported_names) or set(imported_names) != set(entry["materials"]):
+        fail("{} imported material identities {}; manifest declares {}".format(
             entry["asset"], imported_names, entry["materials"]))
     imported_bounds = mesh.get_bounding_box()
     actual_bounds = (imported_bounds.min, imported_bounds.max)
@@ -157,7 +157,7 @@ def import_mesh(entry, materials):
         if any(abs(value - float(expected[axis])) > 0.1 for axis, value in enumerate(actual_values)):
             fail("{} imported {} bounds {} but manifest expects {}. Check OBJ Y reflection/winding.".format(
                 entry["asset"], label, actual_values, expected))
-    for index, material_name in enumerate(entry["materials"]):
+    for index, material_name in enumerate(imported_names):
         mesh.set_material(index, materials[material_name])
     unreal.EditorAssetLibrary.save_loaded_asset(mesh)
     log("Imported {} with {} palette slots".format(asset_path, slot_count))

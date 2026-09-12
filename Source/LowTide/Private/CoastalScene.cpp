@@ -17,6 +17,7 @@
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Math/RotationMatrix.h"
+#include "TimerManager.h"
 #include "TraderActor.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -93,6 +94,10 @@ ACoastalScene::ACoastalScene()
         TEXT("/Game/Generated/M1/SM_LT_CoastalTerrainStone.SM_LT_CoastalTerrainStone"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CoastalTerrainDeepAsset(
         TEXT("/Game/Generated/M1/SM_LT_CoastalTerrainDeep.SM_LT_CoastalTerrainDeep"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> SkySphereAsset(
+        TEXT("/Engine/EngineSky/SM_SkySphere.SM_SkySphere"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> SkyCloudAsset(
+        TEXT("/Engine/EngineSky/M_Sky_Panning_Clouds2_Inst.M_Sky_Panning_Clouds2_Inst"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> AuthoredMaterial(
         TEXT("/Game/Generated/M1/M_LT_StylizedOpaque.M_LT_StylizedOpaque"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> AuthoredWater(
@@ -108,11 +113,13 @@ ACoastalScene::ACoastalScene()
     CoastalTerrainSandMesh = CoastalTerrainSandAsset.Object;
     CoastalTerrainStoneMesh = CoastalTerrainStoneAsset.Object;
     CoastalTerrainDeepMesh = CoastalTerrainDeepAsset.Object;
+    SkySphereMesh = SkySphereAsset.Object;
     CoastalTerrainSand->SetStaticMesh(CoastalTerrainSandMesh);
     CoastalTerrainStone->SetStaticMesh(CoastalTerrainStoneMesh);
     CoastalTerrainDeep->SetStaticMesh(CoastalTerrainDeepMesh);
     StylizedMaterial = AuthoredMaterial.Succeeded() ? AuthoredMaterial.Object : FallbackMaterial.Object;
     WaterMaterial = AuthoredWater.Succeeded() ? AuthoredWater.Object : StylizedMaterial;
+    SkyCloudMaterial = SkyCloudAsset.Object;
     RouteBoundaryInstances->SetStaticMesh(CubeMesh);
     RouteBoundaryInstances->SetCollisionProfileName(TEXT("BlockAll"));
     RouteBoundaryInstances->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -212,6 +219,8 @@ void ACoastalScene::BuildScene()
         AddMaraPart(CubeMesh, MaraLocation + FVector(0.0f, 0.0f, 22.0f), FVector(0.62f, 0.58f, 0.82f),
             FRotator(0.0f, 145.0f, 0.0f), FLinearColor(0.82f, 0.33f, 0.12f), TEXT("MaraApron"));
         BuildTraderHub();
+        BuildHubSlice();
+        BuildHubNature();
     }
 
     Layout.RareArtifactVisual = CreateRareArtifactVisual(Layout.RareArtifactLocation);
@@ -528,11 +537,11 @@ void ACoastalScene::BuildLighting()
     FActorSpawnParameters Parameters;
     Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     if (ADirectionalLight* Sun = GetWorld()->SpawnActor<ADirectionalLight>(FVector::ZeroVector,
-        FRotator(-38.0f, -28.0f, 0.0f), Parameters))
+        FRotator(-38.0f, 135.0f, 0.0f), Parameters))
     {
         Sun->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-        Sun->GetLightComponent()->SetIntensity(5.5f);
-        Sun->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.78f, 0.56f));
+        Sun->GetLightComponent()->SetIntensity(6.5f);
+        Sun->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.86f, 0.70f));
         if (UDirectionalLightComponent* Directional = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
         {
             Directional->SetAtmosphereSunLight(true);
@@ -546,18 +555,49 @@ void ACoastalScene::BuildLighting()
     {
         SpawnedActors.Add(Atmosphere);
     }
+    if (SkySphereMesh && SkyCloudMaterial)
+    {
+        if (AStaticMeshActor* SkySphere = GetWorld()->SpawnActor<AStaticMeshActor>(FVector::ZeroVector,
+            FRotator::ZeroRotator, Parameters))
+        {
+            SkySphere->SetActorScale3D(FVector(400.0f));
+            SkySphere->GetStaticMeshComponent()->SetStaticMesh(SkySphereMesh);
+            SkySphere->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            SkySphere->GetStaticMeshComponent()->SetCastShadow(false);
+            UMaterialInstanceDynamic* SkyMID = UMaterialInstanceDynamic::Create(SkyCloudMaterial, SkySphere);
+            SkyMID->SetVectorParameterValue(TEXT("Zenith Color"), FLinearColor(0.08f, 0.30f, 0.65f));
+            SkyMID->SetVectorParameterValue(TEXT("Horizon color"), FLinearColor(0.55f, 0.72f, 0.80f));
+            SkyMID->SetVectorParameterValue(TEXT("Cloud color"), FLinearColor(0.95f, 0.93f, 0.86f));
+            SkyMID->SetVectorParameterValue(TEXT("Overall Color"), FLinearColor::White);
+            SkyMID->SetScalarParameterValue(TEXT("Cloud opacity"), 0.7f);
+            SkyMID->SetScalarParameterValue(TEXT("Cloud speed"), 0.3f);
+            SkyMID->SetScalarParameterValue(TEXT("Stars brightness"), 0.0f);
+            SkySphere->GetStaticMeshComponent()->SetMaterial(0, SkyMID);
+            SkySphere->Tags.Add(TEXT("M1SkySphere"));
+            SpawnedActors.Add(SkySphere);
+        }
+    }
     if (ASkyLight* Sky = GetWorld()->SpawnActor<ASkyLight>(FVector::ZeroVector, FRotator::ZeroRotator, Parameters))
     {
         Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-        Sky->GetLightComponent()->SetIntensity(1.35f);
-        Sky->GetLightComponent()->RecaptureSky();
+        Sky->GetLightComponent()->SetIntensity(1.65f);
         SpawnedActors.Add(Sky);
+        // Capture once on the next frame, after the newly spawned atmosphere has registered and rendered.
+        // This avoids the grey ambient fallback seen when capture occurs inside the spawn call stack.
+        TWeakObjectPtr<ASkyLight> WeakSky(Sky);
+        GetWorld()->GetTimerManager().SetTimerForNextTick([WeakSky]()
+        {
+            if (ASkyLight* RegisteredSky = WeakSky.Get())
+            {
+                RegisteredSky->GetLightComponent()->RecaptureSky();
+            }
+        });
     }
     if (AExponentialHeightFog* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>(FVector(12000.0f, 0.0f, -250.0f),
         FRotator::ZeroRotator, Parameters))
     {
         Fog->GetComponent()->SetFogDensity(0.0065f);
-        Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(0.34f, 0.46f, 0.48f));
+        Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(0.48f, 0.57f, 0.62f));
         SpawnedActors.Add(Fog);
     }
 }
@@ -683,6 +723,184 @@ void ACoastalScene::BuildTraderHub()
 
     UE_LOG(LogTemp, Display, TEXT("LOW TIDE trader hub kit loaded: %d authored meshes, 3 structural collision proxies."),
         UE_ARRAY_COUNT(HubMeshes));
+}
+
+void ACoastalScene::BuildHubSlice()
+{
+    // These five components share world origin and centimetre units. They dress the existing settlement
+    // floor without adding collision or movement surfaces, so traversal remains owned by the validated scene.
+    struct FHubSliceMesh
+    {
+        const TCHAR* Name;
+        const TCHAR* AssetPath;
+    };
+    const FHubSliceMesh SliceMeshes[] = {
+        { TEXT("Apron"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_Apron.SM_LT_HubSlice_Apron") },
+        { TEXT("WorkCluster"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_WorkCluster.SM_LT_HubSlice_WorkCluster") },
+        { TEXT("GoodsCluster"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_GoodsCluster.SM_LT_HubSlice_GoodsCluster") },
+        { TEXT("MaritimeDetails"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_MaritimeDetails.SM_LT_HubSlice_MaritimeDetails") },
+        { TEXT("GroundDressing"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_GroundDressing.SM_LT_HubSlice_GroundDressing") },
+    };
+
+    TArray<UStaticMesh*> LoadedMeshes;
+    LoadedMeshes.Reserve(UE_ARRAY_COUNT(SliceMeshes));
+    for (const FHubSliceMesh& SliceMesh : SliceMeshes)
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, SliceMesh.AssetPath);
+        if (!Mesh)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("LOW TIDE hub quality slice unavailable: %s. No partial dressing was added."),
+                SliceMesh.AssetPath);
+            return;
+        }
+        LoadedMeshes.Add(Mesh);
+    }
+
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(SliceMeshes); ++Index)
+    {
+        UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this,
+            *FString::Printf(TEXT("HubSlice_%s"), SliceMeshes[Index].Name));
+        AddInstanceComponent(Part);
+        Part->SetupAttachment(SceneRoot);
+        Part->SetStaticMesh(LoadedMeshes[Index]);
+        Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Part->SetCastShadow(Index != 4); // Tiny ground scatter does not justify another dynamic shadow cluster.
+        Part->ComponentTags.Add(TEXT("HubSliceMesh"));
+        Part->SetRelativeTransform(FTransform::Identity);
+        Part->RegisterComponent();
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("LOW TIDE hub quality slice loaded: %d world-origin decorative meshes."),
+        UE_ARRAY_COUNT(SliceMeshes));
+}
+
+void ACoastalScene::BuildHubNature()
+{
+    struct FNatureFamily
+    {
+        const TCHAR* Name;
+        const TCHAR* AssetPath;
+        bool bCastShadow;
+        int32 CullStart;
+        int32 CullEnd;
+        TArray<FTransform> Instances;
+    };
+    const FNatureFamily Families[] = {
+        { TEXT("BushFlowers"), TEXT("/Game/Generated/HubNature/Bush_Common_Flowers.Bush_Common_Flowers"), true, 1800, 6500,
+            { FTransform(FRotator(0, 20, 0), FVector(300, -800, 126), FVector(0.72f)),
+              FTransform(FRotator(0, 145, 0), FVector(1680, 620, 126), FVector(0.82f)) } },
+        { TEXT("Fern"), TEXT("/Game/Generated/HubNature/Fern_1.Fern_1"), false, 1400, 5200,
+            { FTransform(FRotator(0, -18, 0), FVector(145, -930, 126), FVector(0.14f)),
+              FTransform(FRotator(0, 112, 0), FVector(1880, 490, 126), FVector(0.12f)) } },
+        { TEXT("GrassCommon"), TEXT("/Game/Generated/HubNature/Grass_Common_Tall.Grass_Common_Tall"), false, 1200, 4300,
+            { FTransform(FRotator(0, 8, 0), FVector(90, -710, 126), FVector(0.72f)),
+              FTransform(FRotator(0, 80, 0), FVector(520, -2520, 126), FVector(0.62f)),
+              FTransform(FRotator(0, 155, 0), FVector(1760, 920, 126), FVector(0.68f)) } },
+        { TEXT("GrassWispy"), TEXT("/Game/Generated/HubNature/Grass_Wispy_Tall.Grass_Wispy_Tall"), false, 1200, 4500,
+            { FTransform(FRotator(0, -55, 0), FVector(510, -890, 126), FVector(0.55f)),
+              FTransform(FRotator(0, 105, 0), FVector(720, -2710, 126), FVector(0.58f)) } },
+        { TEXT("PlantBig"), TEXT("/Game/Generated/HubNature/Plant_1_Big.Plant_1_Big"), true, 1800, 6500,
+            { FTransform(FRotator(0, 32, 0), FVector(-520, -1720, 126), FVector(0.38f)),
+              FTransform(FRotator(0, 170, 0), FVector(1750, 820, 126), FVector(0.32f)) } },
+        { TEXT("Rock1"), TEXT("/Game/Generated/HubNature/Rock_Medium_1.Rock_Medium_1"), true, 2500, 9000,
+            { FTransform(FRotator(0, 12, 0), FVector(-850, -2100, 120), FVector(0.62f)),
+              FTransform(FRotator(0, 95, 0), FVector(2050, -2800, 118), FVector(0.50f)) } },
+        { TEXT("Rock2"), TEXT("/Game/Generated/HubNature/Rock_Medium_2.Rock_Medium_2"), true, 2500, 9000,
+            { FTransform(FRotator(0, -35, 0), FVector(-1120, -1780, 120), FVector(0.56f)) } },
+        { TEXT("Rock3"), TEXT("/Game/Generated/HubNature/Rock_Medium_3.Rock_Medium_3"), true, 2500, 9000,
+            { FTransform(FRotator(0, 130, 0), FVector(1950, 1080, 120), FVector(0.48f)) } },
+        { TEXT("PathRock"), TEXT("/Game/Generated/HubNature/RockPath_Round_Wide.RockPath_Round_Wide"), false, 1800, 6000,
+            { FTransform(FRotator(0, 24, 0), FVector(2450, -2800, 125), FVector(0.75f)) } },
+        { TEXT("TwistedTree"), TEXT("/Game/Generated/HubNature/TwistedTree_1.TwistedTree_1"), true, 3500, 12000,
+            { FTransform(FRotator(0, 28, 0), FVector(650, -2600, 120), FVector(0.52f)),
+              FTransform(FRotator(0, 142, 0), FVector(2050, -2800, 120), FVector(0.48f)) } },
+    };
+
+    for (const FNatureFamily& Family : Families)
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, Family.AssetPath);
+        if (!Mesh)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("LOW TIDE curated hub nature unavailable: %s"), Family.AssetPath);
+            continue;
+        }
+        UHierarchicalInstancedStaticMeshComponent* Instances = NewObject<UHierarchicalInstancedStaticMeshComponent>(this,
+            *FString::Printf(TEXT("HubNature_%s"), Family.Name));
+        AddInstanceComponent(Instances);
+        Instances->SetupAttachment(SceneRoot);
+        Instances->SetStaticMesh(Mesh);
+        Instances->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Instances->SetCastShadow(Family.bCastShadow);
+        Instances->SetCullDistances(Family.CullStart, Family.CullEnd);
+        Instances->ComponentTags.Add(TEXT("HubNature"));
+        Instances->RegisterComponent();
+        for (const FTransform& Transform : Family.Instances)
+        {
+            Instances->AddInstance(Transform);
+        }
+        if (FCString::Strcmp(Family.Name, TEXT("Rock2")) == 0 && CliffInstances && FacetedRockMesh)
+        {
+            const FBox SourceBounds = FacetedRockMesh->GetBoundingBox();
+            const FBox ReplacementBounds = Mesh->GetBoundingBox();
+            const FVector ReplacementSize = ReplacementBounds.GetSize();
+            for (int32 Index = CliffInstances->GetInstanceCount() - 1; Index >= 0; --Index)
+            {
+                FTransform SourceTransform;
+                if (!CliffInstances->GetInstanceTransform(Index, SourceTransform, true)
+                    || FVector::Dist2D(SourceTransform.GetLocation(), Layout.PlayerStart) > 3500.0f)
+                {
+                    continue;
+                }
+
+                const FBox SourceWorldBounds = SourceBounds.TransformBy(SourceTransform);
+                const FVector TargetSize = SourceWorldBounds.GetSize();
+                FVector ReplacementScale(
+                    TargetSize.X / FMath::Max(ReplacementSize.X, 1.0f),
+                    TargetSize.Y / FMath::Max(ReplacementSize.Y, 1.0f),
+                    TargetSize.Z / FMath::Max(ReplacementSize.Z, 1.0f));
+                const FRotator ReplacementRotation(0.0f, SourceTransform.Rotator().Yaw, 0.0f);
+                FTransform ReplacementTransform(ReplacementRotation, FVector::ZeroVector, ReplacementScale);
+                const FBox TrialBounds = ReplacementBounds.TransformBy(ReplacementTransform);
+                const FVector TrialSize = TrialBounds.GetSize();
+                ReplacementScale.X *= TargetSize.X / FMath::Max(TrialSize.X, 1.0f);
+                ReplacementScale.Y *= TargetSize.Y / FMath::Max(TrialSize.Y, 1.0f);
+                ReplacementTransform.SetScale3D(ReplacementScale);
+                const FBox ScaledBounds = ReplacementBounds.TransformBy(ReplacementTransform);
+                const FVector TargetCenter = SourceWorldBounds.GetCenter();
+                const FVector ScaledCenter = ScaledBounds.GetCenter();
+                ReplacementTransform.SetLocation(FVector(
+                    TargetCenter.X - ScaledCenter.X,
+                    TargetCenter.Y - ScaledCenter.Y,
+                    SourceWorldBounds.Min.Z - ScaledBounds.Min.Z));
+                Instances->AddInstance(ReplacementTransform);
+                CliffInstances->RemoveInstance(Index);
+            }
+        }
+        const TArray<FVector> ClusterCenters = {
+            FVector(260, -820, 126), FVector(-620, -1860, 126),
+            FVector(1740, 820, 126), FVector(620, -2500, 126)
+        };
+        const bool bDenseLowFamily = FCString::Strcmp(Family.Name, TEXT("GrassCommon")) == 0
+            || FCString::Strcmp(Family.Name, TEXT("GrassWispy")) == 0
+            || FCString::Strcmp(Family.Name, TEXT("BushFlowers")) == 0;
+        if (bDenseLowFamily)
+        {
+            const FVector Offsets[] = {
+                FVector(-150, -90, 0), FVector(-80, 115, 0), FVector(15, -135, 0),
+                FVector(90, 75, 0), FVector(165, -15, 0)
+            };
+            const float BaseScale = FCString::Strcmp(Family.Name, TEXT("BushFlowers")) == 0 ? 0.58f : 0.48f;
+            for (int32 ClusterIndex = 0; ClusterIndex < ClusterCenters.Num(); ++ClusterIndex)
+            {
+                for (int32 OffsetIndex = 0; OffsetIndex < UE_ARRAY_COUNT(Offsets); ++OffsetIndex)
+                {
+                    const float Scale = BaseScale + 0.04f * ((ClusterIndex + OffsetIndex) % 3);
+                    Instances->AddInstance(FTransform(FRotator(0.0f, 37.0f * OffsetIndex + 23.0f * ClusterIndex, 0.0f),
+                        ClusterCenters[ClusterIndex] + Offsets[OffsetIndex], FVector(Scale)));
+                }
+            }
+        }
+    }
 }
 
 void ACoastalScene::BuildMainRoute()

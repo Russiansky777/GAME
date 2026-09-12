@@ -128,6 +128,8 @@ private:
     void BuildLighting();
     void BuildSettlement();
     void BuildTraderHub();
+    void BuildHubSlice();
+    void BuildHubNature();
     void BuildMainRoute();
     void BuildAlternateRoute();
     void BuildOptionalRoute();
@@ -227,10 +229,16 @@ private:
     TObjectPtr<UStaticMesh> CoastalTerrainDeepMesh;
 
     UPROPERTY()
+    TObjectPtr<UStaticMesh> SkySphereMesh;
+
+    UPROPERTY()
     TObjectPtr<UMaterialInterface> StylizedMaterial;
 
     UPROPERTY()
     TObjectPtr<UMaterialInterface> WaterMaterial;
+
+    UPROPERTY()
+    TObjectPtr<UMaterialInterface> SkyCloudMaterial;
 
     UPROPERTY(VisibleAnywhere)
     FCoastalSceneLayout Layout;
