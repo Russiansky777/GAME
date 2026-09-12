@@ -136,7 +136,7 @@ ACoastalScene::ACoastalScene()
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> AuthoredMaterial(
         TEXT("/Game/Generated/M1/M_LT_StylizedOpaque.M_LT_StylizedOpaque"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> AuthoredWater(
-        TEXT("/Game/Generated/M1/M_LT_StylizedWater.M_LT_StylizedWater"));
+        TEXT("/Game/Generated/Water/M_LT_CoastalWater.M_LT_CoastalWater"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> FallbackMaterial(
         TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
 
@@ -555,15 +555,13 @@ AActor* ACoastalScene::SpawnWater()
     Surface->SetStaticMesh(CubeMesh);
     Surface->SetRelativeScale3D(FVector(2200.0f, 2200.0f, 0.12f));
     Surface->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Surface->SetCastShadow(false);
     Surface->SetMobility(EComponentMobility::Movable);
     if (WaterMaterial)
     {
-        UMaterialInstanceDynamic* Material = UMaterialInstanceDynamic::Create(WaterMaterial, Water);
-        Material->SetVectorParameterValue(TEXT("BaseColor"), FLinearColor(0.025f, 0.25f, 0.34f));
-        Material->SetVectorParameterValue(TEXT("ShallowColor"), FLinearColor(0.10f, 0.48f, 0.54f));
-        Material->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.025f, 0.25f, 0.34f));
-        Material->SetScalarParameterValue(TEXT("Roughness"), 0.24f);
-        Surface->SetMaterial(0, Material);
+        // Animated normals, depth colour and shore foam are authored in the shared water material.
+        // Its defaults remain authoritative; tide still moves the same collision-free surface actor.
+        Surface->SetMaterial(0, WaterMaterial);
     }
     Surface->RegisterComponent();
     Water->GetRootComponent()->SetMobility(EComponentMobility::Movable);

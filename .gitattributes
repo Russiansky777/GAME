@@ -21,3 +21,4 @@ SourceAssets/Generated/Verstak/Verstak.glb filter=lfs diff=lfs merge=lfs -text
 SourceAssets/Generated/Deck/*.glb filter=lfs diff=lfs merge=lfs -text
 SourceAssets/Generated/Dock/*.glb filter=lfs diff=lfs merge=lfs -text
 SourceAssets/Generated/Crane/*.glb filter=lfs diff=lfs merge=lfs -text
+SourceAssets/Generated/Water/*.tga filter=lfs diff=lfs merge=lfs -text

@@ -99,3 +99,7 @@ Add the seven Deck modules, five Dock modules and one standalone coastal salvage
 ## 2026-09-12 — Walkable working dock (Director playtest correction)
 
 The crane/hook must be reachable from the hub. This supersedes the decorative-only outer berth limitation of checkpoint 1f66db4. Open only the dock mouth in the existing east boundary; use smooth hidden floor proxies, outer-edge containment and compact crane-base collision. Treat the contained dock as safe base territory. Preserve both expedition openings, source visuals and boat non-playability; no new crane interaction or boat mechanics.
+
+## 2026-09-12 — Focused material-based sea polish
+
+Director requests a richer living sea supporting the Meshy hub. Reuse the existing tide-driven surface with a shared animated water material: two small normal maps, depth-colour/opacity transitions, noise-broken contact foam and existing sun/sky lighting. No new ocean mesh, physics, refraction/reflection cameras or gameplay changes. Screen-depth foam and normal motion are economical presentation choices; the coarse coastline geometry remains a separate limitation. Preserve renderer scalability and judge cost from the same packaged benchmark.
