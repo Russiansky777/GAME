@@ -8,6 +8,7 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -411,12 +412,14 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
         int32 TraderHubMeshCount = 0;
         int32 HubSliceMeshCount = 0;
         int32 MeshyHeroPropCount = 0;
+        int32 CraneMeshCount = 0;
         UStaticMeshComponent* SalvageBoat = nullptr;
         for (const UStaticMeshComponent* Mesh : HubMeshes)
         {
             TraderHubMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("TraderHubMesh")) ? 1 : 0;
             HubSliceMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("HubSliceMesh")) ? 1 : 0;
             MeshyHeroPropCount += Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubHeroProp")) ? 1 : 0;
+            CraneMeshCount += Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubCrane")) ? 1 : 0;
             if (Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubHut")))
             {
                 const FVector HutSize = Mesh->GetStaticMesh()->GetBoundingBox().GetSize();
@@ -440,11 +443,33 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
                     BoatSize.X >= 390.0f && BoatSize.Y >= 170.0f && BoatSize.Z >= 115.0f);
                 TestEqual(TEXT("Boat source mesh remains collision-free"), Mesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
             }
+            if (Mesh && Mesh->ComponentTags.Contains(TEXT("MeshyHubCrane")))
+            {
+                const FVector CraneSize = Mesh->GetStaticMesh()->GetBoundingBox().GetSize();
+                TestTrue(TEXT("Salvage crane preserves its authored working silhouette"),
+                    CraneSize.X >= 220.0f && CraneSize.Y >= 125.0f && CraneSize.Z >= 295.0f);
+                TestEqual(TEXT("Crane source mesh remains visual-only"), Mesh->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            }
         }
         TestEqual(TEXT("Trader hub uses the one intact authored Meshy hut"), TraderHubMeshCount, 1);
-        TestEqual(TEXT("Only fitting hub-slice dressing remains beside the hero workbench"), HubSliceMeshCount, 3);
+        TestEqual(TEXT("Only low ground dressing remains beside the authored hub assets"), HubSliceMeshCount, 1);
         TestEqual(TEXT("Hub includes static Meshy workbench and boat anchors"), MeshyHeroPropCount, 2);
+        TestEqual(TEXT("Dock includes one authored salvage crane"), CraneMeshCount, 1);
         TestNotNull(TEXT("Meshy boat is present beside the base"), SalvageBoat);
+        if (SalvageBoat && Layout.WaterActor && Layout.WaterActor->GetRootComponent())
+        {
+            USceneComponent* WaterRoot = Layout.WaterActor->GetRootComponent();
+            TestEqual(TEXT("Boat is attached to the tide-driven water transform"), SalvageBoat->GetAttachParent(), WaterRoot);
+            const float BoatDraft = SalvageBoat->GetRelativeLocation().Z;
+            const FVector OriginalWaterLocation = WaterRoot->GetComponentLocation();
+            const float OriginalBoatZ = SalvageBoat->GetComponentLocation().Z;
+            WaterRoot->SetWorldLocation(OriginalWaterLocation + FVector(0.0f, 0.0f, 75.0f));
+            TestTrue(TEXT("Boat follows a water-height change without a separate tick"),
+                FMath::IsNearlyEqual(SalvageBoat->GetComponentLocation().Z, OriginalBoatZ + 75.0f, 0.1f));
+            TestTrue(TEXT("Boat retains its local water draft"),
+                FMath::IsNearlyEqual(SalvageBoat->GetRelativeLocation().Z, BoatDraft, 0.01f));
+            WaterRoot->SetWorldLocation(OriginalWaterLocation);
+        }
         TInlineComponentArray<UBoxComponent*> HubBoxes(TraderHubScene);
         int32 TraderHubProxyCount = 0;
         int32 WorkbenchProxyCount = 0;
@@ -498,6 +523,90 @@ bool FLowTideM1SceneContainmentTest::RunTest(const FString& Parameters)
             TestFalse(TEXT("Boat hull stays more than 500 cm clear of the actual main-route launch sweep"),
                 World->SweepSingleByChannel(BoatClearanceHit, Layout.RouteWaypoints[0], Layout.RouteWaypoints[1],
                     FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(500.0f, 500.0f), BoatClearanceQuery));
+        }
+
+        TInlineComponentArray<UHierarchicalInstancedStaticMeshComponent*> HubVisualFamilies(TraderHubScene);
+        int32 StandardDeckInstances = 0;
+        int32 LongDeckInstances = 0;
+        int32 DockInstances = 0;
+        int32 DockPilingInstances = 0;
+        int32 RouteFloorFamilies = 0;
+        TArray<FTransform> StandardDeckTransforms;
+        for (const UHierarchicalInstancedStaticMeshComponent* Family : HubVisualFamilies)
+        {
+            if (!Family)
+            {
+                continue;
+            }
+            if (Family->ComponentTags.Contains(TEXT("MeshyHubDeckStandard")))
+            {
+                StandardDeckInstances += Family->GetInstanceCount();
+                TestEqual(TEXT("Deck visuals never add detailed collision"), Family->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+                for (int32 InstanceIndex = 0; InstanceIndex < Family->GetInstanceCount(); ++InstanceIndex)
+                {
+                    FTransform Transform;
+                    if (Family->GetInstanceTransform(InstanceIndex, Transform, true))
+                    {
+                        StandardDeckTransforms.Add(Transform);
+                        const FVector Up = Transform.GetRotation().RotateVector(FVector::UpVector);
+                        TestTrue(TEXT("Fitted deck stays on a gentle support plane"), Up.Z >= 0.995f);
+                    }
+                }
+            }
+            if (Family->ComponentTags.Contains(TEXT("MeshyHubDeckLong")))
+            {
+                LongDeckInstances += Family->GetInstanceCount();
+                TestEqual(TEXT("Deck extension never adds detailed collision"), Family->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            }
+            if (Family->ComponentTags.Contains(TEXT("MeshyHubDock")))
+            {
+                DockInstances += Family->GetInstanceCount();
+                TestEqual(TEXT("Decorative dock never creates an unvalidated traversal surface"),
+                    Family->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            }
+            if (Family->ComponentTags.Contains(TEXT("MeshyHubDockPiling")))
+            {
+                DockPilingInstances += Family->GetInstanceCount();
+                TestNotNull(TEXT("Dock piling has a cooked authored mesh"), Family->GetStaticMesh().Get());
+                TestEqual(TEXT("Dock piling stays visual-only"), Family->GetCollisionEnabled(), ECollisionEnabled::NoCollision);
+            }
+            if (Family->ComponentTags.Contains(TEXT("M1RouteFloor")))
+            {
+                ++RouteFloorFamilies;
+                TestEqual(TEXT("Hidden route floor retains its established gameplay collision"),
+                    Family->GetCollisionEnabled(), ECollisionEnabled::QueryAndPhysics);
+            }
+        }
+        TestTrue(TEXT("Authored deck provides a bounded visual apron and NE support cover"), StandardDeckInstances >= 100);
+        TestTrue(TEXT("Long boards provide the reviewed foreground trim"), LongDeckInstances >= 19);
+        TestEqual(TEXT("Dock uses the reviewed four-module visual composition"), DockInstances, 4);
+        TestEqual(TEXT("Working platform and outer berth have source-derived supports"), DockPilingInstances, 8);
+        TestEqual(TEXT("Deck fitting preserves the one hidden route-floor contract"), RouteFloorFamilies, 1);
+        for (int32 FirstIndex = 0; FirstIndex < StandardDeckTransforms.Num(); ++FirstIndex)
+        {
+            for (int32 SecondIndex = FirstIndex + 1; SecondIndex < StandardDeckTransforms.Num(); ++SecondIndex)
+            {
+                const FVector FirstLocation = StandardDeckTransforms[FirstIndex].GetLocation();
+                const FVector SecondLocation = StandardDeckTransforms[SecondIndex].GetLocation();
+                const float HorizontalDistance = FVector::Dist2D(FirstLocation, SecondLocation);
+                if (HorizontalDistance >= 150.0f && HorizontalDistance <= 210.0f)
+                {
+                    // Compare the actual fitted planes at their shared edge, not their pivots:
+                    // two adjoining sloped tiles can have different center heights with a flush seam.
+                    const FVector Midpoint = (FirstLocation + SecondLocation) * 0.5f;
+                    const auto EdgeHeight = [&Midpoint](const FTransform& Transform)
+                    {
+                        const FVector Top = Transform.TransformPosition(FVector(0.0f, 0.0f, 24.28f));
+                        const FVector Normal = Transform.GetRotation().RotateVector(FVector::UpVector);
+                        return Top.Z - (Normal.X * (Midpoint.X - Top.X)
+                            + Normal.Y * (Midpoint.Y - Top.Y)) / Normal.Z;
+                    };
+                    const float EdgeGap = FMath::Abs(EdgeHeight(StandardDeckTransforms[FirstIndex])
+                        - EdgeHeight(StandardDeckTransforms[SecondIndex]));
+                    TestTrue(FString::Printf(TEXT("Adjacent fitted deck edge gap %.2f cm at %s remains bounded"),
+                        EdgeGap, *Midpoint.ToCompactString()), EdgeGap <= 20.0f);
+                }
+            }
         }
     }
     int32 DonorActors = 0;

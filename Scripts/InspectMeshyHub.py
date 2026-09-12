@@ -29,6 +29,19 @@ SOURCES = {
               "native_front": "bow UE -X (source bow is Blender -X)"},
     "Verstak": {"path": ROOT / "SourceAssets/Generated/Verstak/Verstak.glb", "target_plan_m": 2.0,
                 "native_front": "working side UE +Y (source working side is Blender -Y)"},
+    "DeckCorner": {"path": ROOT / "SourceAssets/Generated/Deck/deck-module-corner-lowpoly.glb", "target_plan_m": 2.0, "native_front": "plan axes UE X, reflected UE Y"},
+    "DeckLong": {"path": ROOT / "SourceAssets/Generated/Deck/deck-module-long-lowpoly.glb", "target_plan_m": 2.0, "native_front": "long axis UE X"},
+    "DeckOuterEdge": {"path": ROOT / "SourceAssets/Generated/Deck/deck-module-outer-edge-lowpoly.glb", "target_plan_m": 2.0, "native_front": "long axis UE X; source sides reflected on UE Y"},
+    "DeckRepaired": {"path": ROOT / "SourceAssets/Generated/Deck/deck-module-repaired-lowpoly.glb", "target_plan_m": 2.0, "native_front": "long axis UE X"},
+    "DeckStandard": {"path": ROOT / "SourceAssets/Generated/Deck/deck-module-standard-lowpoly.glb", "target_plan_m": 2.0, "native_front": "long axis UE X"},
+    "DeckStepRamp": {"path": ROOT / "SourceAssets/Generated/Deck/deck-module-step-ramp-lowpoly.glb", "target_plan_m": 2.0, "native_front": "step direction UE Y after reflection"},
+    "DeckTransition": {"path": ROOT / "SourceAssets/Generated/Deck/deck-module-transition-lowpoly.glb", "target_plan_m": 2.0, "native_front": "long axis UE Y after reflection"},
+    "DockCornerPlatform": {"path": ROOT / "SourceAssets/Generated/Dock/Dock Corner Platform.glb", "target_plan_m": 4.0, "native_front": "long axis UE Y after reflection"},
+    "DockEndBerth": {"path": ROOT / "SourceAssets/Generated/Dock/Dock End Berth Section.glb", "target_plan_m": 4.0, "native_front": "long axis UE X"},
+    "DockLadderAccess": {"path": ROOT / "SourceAssets/Generated/Dock/Dock Ladder Access Section.glb", "target_plan_m": 4.0, "native_front": "long axis UE X; ladder side reflected on UE Y"},
+    "DockRepaired": {"path": ROOT / "SourceAssets/Generated/Dock/Dock Repaired Weathered Variant.glb", "target_plan_m": 4.0, "native_front": "long axis UE X; repair side reflected on UE Y"},
+    "DockStraight": {"path": ROOT / "SourceAssets/Generated/Dock/Dock Straight Section.glb", "target_plan_m": 4.0, "native_front": "long axis UE X"},
+    "Crane": {"path": ROOT / "SourceAssets/Generated/Crane/Meshy_AI_coastal_salvage_crane_0912114729_texture.glb", "target_height_m": 3.0, "native_front": "boom axis requires UE import/profile confirmation"},
 }
 
 
@@ -105,6 +118,28 @@ def mesh_record(obj):
             key = tuple(sorted((a, b)))
             edge_use[key] = edge_use.get(key, 0) + 1
     non_manifold = sum(1 for uses in edge_use.values() if uses != 2)
+    upward_bins = {}
+    normal_matrix = obj.matrix_world.to_3x3().inverted().transposed()
+    for polygon in mesh.polygons:
+        world_normal = (normal_matrix @ polygon.normal).normalized()
+        if world_normal.z < 0.8:
+            continue
+        world_center = obj.matrix_world @ polygon.center
+        z_key = round(world_center.z, 3)
+        entry = upward_bins.setdefault(z_key, {"area": 0.0, "points": []})
+        entry["area"] += polygon.area
+        entry["points"].extend(obj.matrix_world @ mesh.vertices[index].co for index in polygon.vertices)
+    upward_peaks = [
+        {
+            "z_m": z,
+            "source_mesh_area_m2": entry["area"],
+            "bounds_xy_m": {
+                "min": [min(point[i] for point in entry["points"]) for i in range(2)],
+                "max": [max(point[i] for point in entry["points"]) for i in range(2)],
+            },
+        }
+        for z, entry in sorted(upward_bins.items(), key=lambda item: item[1]["area"], reverse=True)[:12]
+    ]
     return {
         "name": obj.name,
         "mesh": mesh.name,
@@ -126,6 +161,7 @@ def mesh_record(obj):
         # authoritative source-normal presence is glb.primitive_attributes.NORMAL.
         "blender_loop_normals_all_nonzero": bool(mesh.loops) and all(loop.normal.length_squared > 0 for loop in mesh.loops),
         "non_manifold_or_boundary_edges": non_manifold,
+        "dominant_upward_surface_z": upward_peaks,
         "bounds_world_m": bounds_for(obj),
     }
 
@@ -225,6 +261,11 @@ def inspect(label, spec, output_root, no_render):
     (output / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     bpy.ops.wm.save_as_mainfile(filepath=str(output / f"{label}_inspection.blend"))
 
+    if not spec.get("target_plan_m") and not spec.get("target_height_m"):
+        if not no_render:
+            render_preview(output / "preview.png", bounds)
+        return
+
     # Meshy sources are Y-up glTF. Preserve every mesh/material and apply one
     # uniform scale to the common hierarchy, then bake a ground-centred pivot.
     target_plan = spec.get("target_plan_m")
@@ -245,7 +286,7 @@ def inspect(label, spec, output_root, no_render):
     bpy.context.view_layer.update()
     for obj in objects:
         obj.select_set(obj.type in {"MESH", "ARMATURE", "EMPTY"})
-    normalized = output / f"SM_MeshyHub_{label}_import.glb"
+    normalized = output / f"SM_Meshy_{label}_import.glb"
     bpy.ops.export_scene.gltf(
         filepath=str(normalized), export_format="GLB", use_selection=True,
         export_apply=False, export_yup=True, export_materials="EXPORT",
@@ -272,8 +313,11 @@ def main():
     output = Path(args[0]).resolve() if args and not args[0].startswith("--") else DEFAULT_OUTPUT
     no_render = "--no-render" in args
     requested = next((arg.split("=", 1)[1] for arg in args if arg.startswith("--only=")), None)
+    modules_only = "--modules-only" in args
     for label, spec in SOURCES.items():
         if requested and label.lower() != requested.lower():
+            continue
+        if modules_only and not (label.startswith("Deck") or label.startswith("Dock") or label == "Crane"):
             continue
         inspect(label, spec, output, no_render)
 

@@ -5,6 +5,7 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -15,6 +16,7 @@
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Math/RotationMatrix.h"
 #include "TimerManager.h"
@@ -55,6 +57,18 @@ ACoastalScene::ACoastalScene()
     AnomalyInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("AnomalyFamily"));
     RouteBoundaryInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("RouteBoundaryFamily"));
     RouteFloorCollision = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("RouteFloorCollision"));
+    MeshyDeckInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDeckVisuals"));
+    MeshyDeckLongInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDeckLongVisuals"));
+    MeshyDeckCornerInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDeckCornerVisuals"));
+    MeshyDeckEdgeInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDeckEdgeVisuals"));
+    MeshyDeckRepairedInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDeckRepairedVisuals"));
+    MeshyDeckTransitionInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDeckTransitionVisuals"));
+    MeshyDockInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDockVisuals"));
+    MeshyDockCornerInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDockCornerVisuals"));
+    MeshyDockEndInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDockEndVisuals"));
+    MeshyDockLadderInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDockLadderVisuals"));
+    MeshyDockRepairedInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDockRepairedVisuals"));
+    MeshyDockPilingInstances = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(TEXT("MeshyDockPilingVisuals"));
     CoastalTerrainSand = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CoastalTerrainSand"));
     CoastalTerrainStone = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CoastalTerrainStone"));
     CoastalTerrainDeep = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CoastalTerrainDeep"));
@@ -102,6 +116,21 @@ ACoastalScene::ACoastalScene()
         TEXT("/Game/Generated/MeshyHub/Verstak/SM_MeshyHub_Verstak_import/StaticMeshes/SM_MeshyHub_Verstak_import.SM_MeshyHub_Verstak_import"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyHubBoatAsset(
         TEXT("/Game/Generated/MeshyHub/Lodka/SM_MeshyHub_Lodka_import/StaticMeshes/SM_MeshyHub_Lodka_import.SM_MeshyHub_Lodka_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDeckStandardAsset(
+        TEXT("/Game/Generated/MeshyModules/Deck/DeckStandard/SM_Meshy_DeckStandard_import/StaticMeshes/SM_Meshy_DeckStandard_import.SM_Meshy_DeckStandard_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDeckLongAsset(
+        TEXT("/Game/Generated/MeshyModules/Deck/DeckLong/SM_Meshy_DeckLong_import/StaticMeshes/SM_Meshy_DeckLong_import.SM_Meshy_DeckLong_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDeckCornerAsset(TEXT("/Game/Generated/MeshyModules/Deck/DeckCorner/SM_Meshy_DeckCorner_import/StaticMeshes/SM_Meshy_DeckCorner_import.SM_Meshy_DeckCorner_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDeckEdgeAsset(TEXT("/Game/Generated/MeshyModules/Deck/DeckOuterEdge/SM_Meshy_DeckOuterEdge_import/StaticMeshes/SM_Meshy_DeckOuterEdge_import.SM_Meshy_DeckOuterEdge_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDeckRepairedAsset(TEXT("/Game/Generated/MeshyModules/Deck/DeckRepaired/SM_Meshy_DeckRepaired_import/StaticMeshes/SM_Meshy_DeckRepaired_import.SM_Meshy_DeckRepaired_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDeckTransitionAsset(TEXT("/Game/Generated/MeshyModules/Deck/DeckTransition/SM_Meshy_DeckTransition_import/StaticMeshes/SM_Meshy_DeckTransition_import.SM_Meshy_DeckTransition_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDockStraightAsset(TEXT("/Game/Generated/MeshyModules/Dock/DockStraight/SM_Meshy_DockStraight_import/StaticMeshes/SM_Meshy_DockStraight_import.SM_Meshy_DockStraight_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDockCornerAsset(TEXT("/Game/Generated/MeshyModules/Dock/DockCornerPlatform/SM_Meshy_DockCornerPlatform_import/StaticMeshes/SM_Meshy_DockCornerPlatform_import.SM_Meshy_DockCornerPlatform_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDockEndAsset(TEXT("/Game/Generated/MeshyModules/Dock/DockEndBerth/SM_Meshy_DockEndBerth_import/StaticMeshes/SM_Meshy_DockEndBerth_import.SM_Meshy_DockEndBerth_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDockLadderAsset(TEXT("/Game/Generated/MeshyModules/Dock/DockLadderAccess/SM_Meshy_DockLadderAccess_import/StaticMeshes/SM_Meshy_DockLadderAccess_import.SM_Meshy_DockLadderAccess_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDockRepairedAsset(TEXT("/Game/Generated/MeshyModules/Dock/DockRepaired/SM_Meshy_DockRepaired_import/StaticMeshes/SM_Meshy_DockRepaired_import.SM_Meshy_DockRepaired_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyDockPilingAsset(TEXT("/Game/Generated/MeshyModules/Dock/DockPiling/SM_Meshy_DockPiling_import/StaticMeshes/SM_Meshy_DockPiling_import.SM_Meshy_DockPiling_import"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshyCraneAsset(TEXT("/Game/Generated/MeshyModules/Crane/Crane/SM_Meshy_Crane_import/StaticMeshes/SM_Meshy_Crane_import.SM_Meshy_Crane_import"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> SkyCloudAsset(
         TEXT("/Engine/EngineSky/M_Sky_Panning_Clouds2_Inst.M_Sky_Panning_Clouds2_Inst"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> AuthoredMaterial(
@@ -123,6 +152,17 @@ ACoastalScene::ACoastalScene()
     MeshyHubHutMesh = MeshyHubHutAsset.Object;
     MeshyHubWorkbenchMesh = MeshyHubWorkbenchAsset.Object;
     MeshyHubBoatMesh = MeshyHubBoatAsset.Object;
+    MeshyDeckStandardMesh = MeshyDeckStandardAsset.Object;
+    MeshyDeckLongMesh = MeshyDeckLongAsset.Object;
+    MeshyDeckCornerMesh = MeshyDeckCornerAsset.Object; MeshyDeckEdgeMesh = MeshyDeckEdgeAsset.Object;
+    MeshyDeckRepairedMesh = MeshyDeckRepairedAsset.Object; MeshyDeckTransitionMesh = MeshyDeckTransitionAsset.Object;
+    MeshyDockStraightMesh = MeshyDockStraightAsset.Object;
+    MeshyDockCornerMesh = MeshyDockCornerAsset.Object;
+    MeshyDockEndMesh = MeshyDockEndAsset.Object;
+    MeshyDockLadderMesh = MeshyDockLadderAsset.Object;
+    MeshyDockRepairedMesh = MeshyDockRepairedAsset.Object;
+    MeshyDockPilingMesh = MeshyDockPilingAsset.Object;
+    MeshyCraneMesh = MeshyCraneAsset.Object;
     CoastalTerrainSand->SetStaticMesh(CoastalTerrainSandMesh);
     CoastalTerrainStone->SetStaticMesh(CoastalTerrainStoneMesh);
     CoastalTerrainDeep->SetStaticMesh(CoastalTerrainDeepMesh);
@@ -140,6 +180,16 @@ ACoastalScene::ACoastalScene()
     RouteFloorCollision->SetHiddenInGame(true);
     RouteFloorCollision->SetVisibility(false);
     RouteFloorCollision->ComponentTags.Add(TEXT("M1RouteFloor"));
+    for (UHierarchicalInstancedStaticMeshComponent* VisualFamily : { MeshyDeckInstances.Get(), MeshyDeckLongInstances.Get(), MeshyDeckCornerInstances.Get(), MeshyDeckEdgeInstances.Get(), MeshyDeckRepairedInstances.Get(), MeshyDeckTransitionInstances.Get(), MeshyDockInstances.Get(), MeshyDockCornerInstances.Get(), MeshyDockEndInstances.Get(), MeshyDockLadderInstances.Get(), MeshyDockRepairedInstances.Get(), MeshyDockPilingInstances.Get() })
+    {
+        VisualFamily->SetupAttachment(SceneRoot);
+        VisualFamily->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        VisualFamily->SetGenerateOverlapEvents(false);
+        VisualFamily->SetCanEverAffectNavigation(false);
+        VisualFamily->SetCastShadow(true);
+        VisualFamily->SetCullDistances(2500, 18000);
+        VisualFamily->ComponentTags.Add(TEXT("MeshyHubDeckDockVisual"));
+    }
 }
 
 void ACoastalScene::BuildScene()
@@ -230,6 +280,7 @@ void ACoastalScene::BuildScene()
         BuildTraderHub();
         BuildHubSlice();
         BuildMeshyHubHeroProps();
+        BuildMeshyHubDeckAndDock();
         BuildHubNature();
     }
 
@@ -617,8 +668,8 @@ void ACoastalScene::BuildLighting()
 
 void ACoastalScene::BuildSettlement()
 {
-    // Collision-bearing settlement floor remains explicit while the authored terrain masks its outer silhouette.
-    AddInstance(StoneInstances, FVector(0.0f, -200.0f, 35.0f), FVector(62.0f, 68.0f, 1.8f), FRotator(0.0f, -4.0f, 0.0f));
+    // The terrain and authored deck own the visible shelf. Preserve the former continuous floor as hidden collision.
+    AddInstance(RouteFloorCollision, FVector(0.0f, -200.0f, 35.0f), FVector(62.0f, 68.0f, 1.8f), FRotator(0.0f, -4.0f, 0.0f));
 
     AddRockCluster(FVector(-2200.0f, -2400.0f, 0.0f), FVector(1700.0f, 1400.0f, 500.0f), 17, false);
     AddRockCluster(FVector(2400.0f, 2600.0f, 0.0f), FVector(500.0f, 300.0f, 500.0f), 29, false);
@@ -634,14 +685,11 @@ void ACoastalScene::BuildSettlement()
     AddInstance(CliffInstances, FVector(2750.0f, -1780.0f, 90.0f), FVector(1.2f, 1.2f, 4.0f));
     AddInstance(CliffInstances, FVector(2750.0f, 880.0f, 90.0f), FVector(1.2f, 1.2f, 4.0f));
     AddInstance(CliffInstances, FVector(2750.0f, 1870.0f, 90.0f), FVector(1.2f, 1.2f, 4.0f));
-    AddInstance(StoneInstances, FVector(2600.0f, 1380.0f, 120.0f), FVector(6.0f, 12.0f, 1.0f), FRotator(0.0f, 26.0f, 0.0f));
+    // Preserve the raised blue-return support while replacing its visible primitive slab with authored decking.
+    AddInstance(RouteFloorCollision, FVector(2600.0f, 1380.0f, 120.0f), FVector(6.0f, 12.0f, 1.0f), FRotator(0.0f, 26.0f, 0.0f));
     AddRockCluster(FVector(-2800.0f, 0.0f, -120.0f), FVector(350.0f, 2600.0f, 600.0f), 31, false);
     AddRockCluster(FVector(0.0f, 2950.0f, -120.0f), FVector(2500.0f, 350.0f, 560.0f), 37, false);
 
-    BuildFishingHut(FVector(-1100.0f, -1650.0f, 150.0f), 18.0f, 1.0f);
-    BuildFishingHut(FVector(-1550.0f, 900.0f, 155.0f), 125.0f, 0.75f);
-
-    BuildRopeFence(FVector(-400.0f, 2600.0f, 110.0f), FVector(2500.0f, 2100.0f, 120.0f), 6);
     BuildRopeFence(FVector(-2600.0f, -2900.0f, 110.0f), FVector(-500.0f, -3200.0f, 105.0f), 5);
 }
 
@@ -720,7 +768,7 @@ void ACoastalScene::BuildTraderHub()
 
 void ACoastalScene::BuildHubSlice()
 {
-    // These three retained components share world origin and centimetre units. They dress the existing settlement
+    // Ground dressing shares world origin and centimetre units without affecting traversal.
     // floor without adding collision or movement surfaces, so traversal remains owned by the validated scene.
     struct FHubSliceMesh
     {
@@ -728,8 +776,6 @@ void ACoastalScene::BuildHubSlice()
         const TCHAR* AssetPath;
     };
     const FHubSliceMesh SliceMeshes[] = {
-        { TEXT("Apron"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_Apron.SM_LT_HubSlice_Apron") },
-        { TEXT("MaritimeDetails"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_MaritimeDetails.SM_LT_HubSlice_MaritimeDetails") },
         { TEXT("GroundDressing"), TEXT("/Game/Generated/HubSlice/SM_LT_HubSlice_GroundDressing.SM_LT_HubSlice_GroundDressing") },
     };
 
@@ -805,10 +851,14 @@ void ACoastalScene::BuildMeshyHubHeroProps()
     WorkbenchBody->ComponentTags.Add(TEXT("MeshyHubWorkbenchCollision"));
     WorkbenchBody->RegisterComponent();
 
-    // The hauled-up boat anchors the east shore. It stays static: there is no boating system or idle tick.
+    // The boat rides the existing tide water transform; no boat physics or per-frame work is needed.
     UStaticMeshComponent* Boat = AddHeroVisual(MeshyHubBoatMesh, TEXT("MeshySalvageBoat"),
-        FVector(2150.0f, -50.0f, 105.0f), FRotator(0.0f, -35.0f, 0.0f));
+        FVector(3575.0f, 0.0f, -174.0f), FRotator::ZeroRotator);
     Boat->ComponentTags.Add(TEXT("MeshyHubBoat"));
+    if (Layout.WaterActor && Layout.WaterActor->GetRootComponent())
+    {
+        Boat->AttachToComponent(Layout.WaterActor->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
+    }
 
     const auto AddBoatBody = [this, Boat](FName Name, const FVector& Center, const FVector& Extent)
     {
@@ -828,6 +878,272 @@ void ACoastalScene::BuildMeshyHubHeroProps()
     AddBoatBody(TEXT("MeshySalvageBoatBow"), FVector(-150.0f, 0.0f, 30.0f), FVector(45.0f, 42.0f, 30.0f));
 }
 
+void ACoastalScene::BuildMeshyHubDeckAndDock()
+{
+    if (!MeshyDeckStandardMesh || !MeshyDeckLongMesh || !MeshyDeckCornerMesh || !MeshyDeckEdgeMesh
+        || !MeshyDeckRepairedMesh || !MeshyDeckTransitionMesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LOW TIDE Meshy deck modules unavailable; hidden settlement floor remains playable."));
+        return;
+    }
+
+    // Frame pitch is deliberately the measured module bounds, not the inset plank-face spans.
+    constexpr float StandardPitchX = 200.0f;
+    constexpr float StandardPitchY = 181.37f;
+    constexpr float StandardTop = 24.28f;
+    constexpr float LongPitchY = 83.44f;
+    constexpr float LongTop = 11.13f;
+    const FRotator ApronRotation(0.0f, -30.0f, 0.0f);
+    const FVector ApronCenter(650.0f, -550.0f, 0.0f);
+    const auto LocalApronLocation = [&ApronRotation, &ApronCenter](float LocalX, float LocalY, float Z)
+    {
+        return ApronCenter + ApronRotation.RotateVector(FVector(LocalX, LocalY, 0.0f)) + FVector(0.0f, 0.0f, Z);
+    };
+
+    MeshyDeckInstances->SetStaticMesh(MeshyDeckStandardMesh);
+    MeshyDeckLongInstances->SetStaticMesh(MeshyDeckLongMesh);
+    MeshyDeckCornerInstances->SetStaticMesh(MeshyDeckCornerMesh);
+    MeshyDeckEdgeInstances->SetStaticMesh(MeshyDeckEdgeMesh);
+    MeshyDeckRepairedInstances->SetStaticMesh(MeshyDeckRepairedMesh);
+    MeshyDeckTransitionInstances->SetStaticMesh(MeshyDeckTransitionMesh);
+    for (int32 X = 0; X < 10; ++X)
+    {
+        for (int32 Y = 0; Y < 8; ++Y)
+        {
+            if (((X == 0 || X == 9) && Y == 0) || (X == 7 && Y == 4))
+            {
+                continue;
+            }
+            const float LocalX = (X - 4.5f) * StandardPitchX;
+            const float LocalY = (Y - 3.5f) * StandardPitchY;
+            MeshyDeckInstances->AddInstance(FTransform(ApronRotation,
+                LocalApronLocation(LocalX, LocalY, 125.0f - StandardTop)));
+        }
+    }
+
+    MeshyDeckCornerInstances->AddInstance(FTransform(ApronRotation, LocalApronLocation(-900.0f, -634.795f, 98.09f)));
+    MeshyDeckCornerInstances->AddInstance(FTransform(ApronRotation, LocalApronLocation(900.0f, -634.795f, 98.09f)));
+    MeshyDeckRepairedInstances->AddInstance(FTransform(ApronRotation, LocalApronLocation(500.0f, 90.685f, 97.05f)));
+    MeshyDeckEdgeInstances->AddInstance(FTransform(ApronRotation, LocalApronLocation(-900.0f, -850.64f, 100.90f)));
+
+    // A narrow northeast connector reaches the dock's inner straight without filling the open clearing.
+    for (int32 Index = 0; Index < 4; ++Index)
+    {
+        MeshyDeckInstances->AddInstance(FTransform(ApronRotation,
+            LocalApronLocation(900.0f, 815.165f + Index * StandardPitchY, 125.0f - StandardTop)));
+    }
+    MeshyDeckTransitionInstances->AddInstance(FTransform(FRotator(0.0f, 60.0f, 0.0f),
+        LocalApronLocation(900.0f, 815.165f + 4.0f * StandardPitchY, 99.82f)));
+
+    // Two narrow rows continue beneath the full Budka footprint without growing the whole apron.
+    for (int32 X = 0; X < 10; ++X)
+    {
+        const float LocalX = (X - 4.5f) * StandardPitchX;
+        for (const float LocalY : { -767.20f, -850.64f })
+        {
+            if (X == 0 && LocalY < -800.0f)
+            {
+                continue; // The authored outer-edge module occupies this trim cell.
+            }
+            MeshyDeckLongInstances->AddInstance(FTransform(ApronRotation,
+                LocalApronLocation(LocalX, LocalY, 125.0f - LongTop)));
+        }
+    }
+
+    // This 3 x 7 field fully masks the preserved 600 x 1200 cm NE blue-return support at its existing top Z=170.
+    const FRotator ReturnPatchRotation(0.0f, 26.0f, 0.0f);
+    const FVector ReturnPatchCenter(2600.0f, 1380.0f, 145.72f);
+    for (int32 X = 0; X < 3; ++X)
+    {
+        for (int32 Y = 0; Y < 7; ++Y)
+        {
+            MeshyDeckInstances->AddInstance(FTransform(ReturnPatchRotation,
+                ReturnPatchCenter + ReturnPatchRotation.RotateVector(FVector((X - 1) * StandardPitchX,
+                    (Y - 3) * StandardPitchY, 0.0f))));
+        }
+    }
+
+    // The route floor is the established traversal contract.  Conform only the new visual modules to its
+    // existing surface, so raised authored terrain cannot show through otherwise-flat deck planks.
+    FCollisionQueryParams RouteFloorQuery(SCENE_QUERY_STAT(LowTideDeckFloorFit), false);
+    for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+    {
+        if (*It != this)
+        {
+            RouteFloorQuery.AddIgnoredActor(*It);
+        }
+    }
+    TInlineComponentArray<UPrimitiveComponent*> ScenePrimitives(this);
+    for (UPrimitiveComponent* Primitive : ScenePrimitives)
+    {
+        if (Primitive && Primitive != RouteFloorCollision)
+        {
+            RouteFloorQuery.AddIgnoredComponent(Primitive);
+        }
+    }
+
+    int32 MissingFloorSamples = 0;
+    float MaxDeckLiftCm = 0.0f;
+    float MaxDeckSlopeDegrees = 0.0f;
+    constexpr float DeckClearanceCm = 3.0f;
+    constexpr float MaxDeckSlopeDegreesAllowed = 5.0f;
+    const float MaxDeckSlope = FMath::Tan(FMath::DegreesToRadians(MaxDeckSlopeDegreesAllowed));
+    const auto FitDeckFamily = [this, &RouteFloorQuery, &MissingFloorSamples, &MaxDeckLiftCm, &MaxDeckSlopeDegrees,
+        MaxDeckSlope, DeckClearanceCm]
+        (UHierarchicalInstancedStaticMeshComponent* Family, float Width, float Depth, float TopDatum)
+    {
+        if (!Family)
+        {
+            return;
+        }
+        const float InsetX = Width * 0.49f;
+        const float InsetY = Depth * 0.49f;
+        for (int32 InstanceIndex = 0; InstanceIndex < Family->GetInstanceCount(); ++InstanceIndex)
+        {
+            FTransform OriginalTransform;
+            if (!Family->GetInstanceTransform(InstanceIndex, OriginalTransform, true))
+            {
+                continue;
+            }
+
+            TArray<FVector, TInlineAllocator<49>> SampleOffsets;
+            TArray<float, TInlineAllocator<49>> SampleHeights;
+            for (int32 X = -3; X <= 3; ++X)
+            {
+                for (int32 Y = -3; Y <= 3; ++Y)
+                {
+                    const FVector LocalOffset(float(X) * InsetX / 3.0f, float(Y) * InsetY / 3.0f, 0.0f);
+                    const FVector WorldOffset = OriginalTransform.GetRotation().RotateVector(LocalOffset);
+                    const FVector ProbeOrigin = OriginalTransform.GetLocation() + WorldOffset;
+                    FHitResult Hit;
+                    if (GetWorld()->LineTraceSingleByChannel(Hit, ProbeOrigin + FVector(0.0f, 0.0f, 2000.0f),
+                        ProbeOrigin - FVector(0.0f, 0.0f, 2000.0f), ECC_Pawn, RouteFloorQuery)
+                        && Hit.GetComponent() == RouteFloorCollision)
+                    {
+                        SampleOffsets.Add(LocalOffset);
+                        SampleHeights.Add(Hit.ImpactPoint.Z);
+                    }
+                    else
+                    {
+                        ++MissingFloorSamples;
+                    }
+                }
+            }
+            if (SampleHeights.Num() < 4)
+            {
+                continue;
+            }
+
+            float MeanHeight = 0.0f;
+            float SumX2 = 0.0f;
+            float SumY2 = 0.0f;
+            float SumXZ = 0.0f;
+            float SumYZ = 0.0f;
+            for (int32 SampleIndex = 0; SampleIndex < SampleHeights.Num(); ++SampleIndex)
+            {
+                MeanHeight += SampleHeights[SampleIndex];
+            }
+            MeanHeight /= SampleHeights.Num();
+            for (int32 SampleIndex = 0; SampleIndex < SampleHeights.Num(); ++SampleIndex)
+            {
+                const FVector& Offset = SampleOffsets[SampleIndex];
+                const float HeightDelta = SampleHeights[SampleIndex] - MeanHeight;
+                SumX2 += Offset.X * Offset.X;
+                SumY2 += Offset.Y * Offset.Y;
+                SumXZ += Offset.X * HeightDelta;
+                SumYZ += Offset.Y * HeightDelta;
+            }
+            FVector2D Slope(SumXZ / FMath::Max(SumX2, KINDA_SMALL_NUMBER),
+                SumYZ / FMath::Max(SumY2, KINDA_SMALL_NUMBER));
+            if (Slope.Size() > MaxDeckSlope)
+            {
+                Slope = Slope.GetSafeNormal() * MaxDeckSlope;
+            }
+            const float SlopeX = Slope.X;
+            const float SlopeY = Slope.Y;
+            float Lift = DeckClearanceCm;
+            for (int32 SampleIndex = 0; SampleIndex < SampleHeights.Num(); ++SampleIndex)
+            {
+                const FVector& Offset = SampleOffsets[SampleIndex];
+                const float PredictedHeight = MeanHeight + SlopeX * Offset.X + SlopeY * Offset.Y;
+                Lift = FMath::Max(Lift, SampleHeights[SampleIndex] - PredictedHeight + DeckClearanceCm);
+            }
+
+            const FVector WorldNormal = OriginalTransform.GetRotation().RotateVector(FVector(-SlopeX, -SlopeY, 1.0f)).GetSafeNormal();
+            const FRotator FittedRotation = FRotationMatrix::MakeFromZX(WorldNormal,
+                OriginalTransform.GetRotation().RotateVector(FVector::ForwardVector)).Rotator();
+            const FVector TopCenter(OriginalTransform.GetLocation().X, OriginalTransform.GetLocation().Y, MeanHeight + Lift);
+            const FVector FittedPivot = TopCenter - FittedRotation.RotateVector(FVector(0.0f, 0.0f, TopDatum));
+            Family->UpdateInstanceTransform(InstanceIndex, FTransform(FittedRotation, FittedPivot), true, true, true);
+            MaxDeckLiftCm = FMath::Max(MaxDeckLiftCm, Lift);
+            MaxDeckSlopeDegrees = FMath::Max(MaxDeckSlopeDegrees,
+                FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(WorldNormal.Z, -1.0f, 1.0f))));
+        }
+    };
+
+    FitDeckFamily(MeshyDeckInstances, 200.0f, 181.37f, StandardTop);
+    FitDeckFamily(MeshyDeckLongInstances, 200.0f, 83.44f, LongTop);
+    FitDeckFamily(MeshyDeckCornerInstances, 200.0f, 198.80f, 26.91f);
+    FitDeckFamily(MeshyDeckEdgeInstances, 200.0f, 170.23f, 24.10f);
+    FitDeckFamily(MeshyDeckRepairedInstances, 200.0f, 187.48f, 27.95f);
+    FitDeckFamily(MeshyDeckTransitionInstances, 186.01f, 200.0f, 25.18f);
+    UE_LOG(LogTemp, Display, TEXT("LOW TIDE fitted deck visuals to route floor: max lift %.1f cm, max slope %.1f deg, %d missing samples."),
+        MaxDeckLiftCm, MaxDeckSlopeDegrees, MissingFloorSamples);
+
+    MeshyDeckInstances->ComponentTags.Add(TEXT("MeshyHubDeckStandard"));
+    MeshyDeckLongInstances->ComponentTags.Add(TEXT("MeshyHubDeckLong"));
+
+    if (!MeshyDockStraightMesh || !MeshyDockCornerMesh || !MeshyDockEndMesh || !MeshyDockLadderMesh || !MeshyDockRepairedMesh
+        || !MeshyDockPilingMesh || !MeshyCraneMesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("LOW TIDE Meshy dock modules unavailable; deck remains visual-only."));
+        return;
+    }
+
+    MeshyDockInstances->SetStaticMesh(MeshyDockStraightMesh);
+    MeshyDockCornerInstances->SetStaticMesh(MeshyDockCornerMesh);
+    MeshyDockEndInstances->SetStaticMesh(MeshyDockEndMesh);
+    MeshyDockLadderInstances->SetStaticMesh(MeshyDockLadderMesh);
+    MeshyDockRepairedInstances->SetStaticMesh(MeshyDockRepairedMesh);
+    MeshyDockPilingInstances->SetStaticMesh(MeshyDockPilingMesh);
+
+    // Only the inner landing sits inside the settled play space. The remaining berth is decorative beyond the
+    // preserved east boundary, so no false traversal surface or new boundary gap is introduced.
+    MeshyDockInstances->AddInstance(FTransform(FRotator::ZeroRotator, FVector(2450.0f, 300.0f, 57.77f)));
+    MeshyDockRepairedInstances->AddInstance(FTransform(FRotator::ZeroRotator, FVector(2830.0f, 300.0f, 58.04f)));
+    MeshyDockCornerInstances->AddInstance(FTransform(FRotator::ZeroRotator, FVector(3200.0f, 300.0f, 62.64f)));
+    MeshyDockEndInstances->AddInstance(FTransform(FRotator::ZeroRotator, FVector(3575.0f, 300.0f, -2.88f)));
+    for (const FVector& PileLocation : { FVector(3035.0f, 480.0f, -280.0f), FVector(3365.0f, 480.0f, -280.0f),
+        FVector(3035.0f, 105.0f, -280.0f), FVector(3365.0f, 105.0f, -280.0f) })
+    {
+        MeshyDockPilingInstances->AddInstance(FTransform(FRotator::ZeroRotator, PileLocation));
+    }
+    // The outer berth reaches deeper water. Extend only its clean wood shafts down into the seabed.
+    for (const FVector& PileLocation : { FVector(3391.0f, 163.0f, -520.0f), FVector(3759.0f, 163.0f, -520.0f),
+        FVector(3391.0f, 437.0f, -520.0f), FVector(3759.0f, 437.0f, -520.0f) })
+    {
+        MeshyDockPilingInstances->AddInstance(FTransform(FRotator::ZeroRotator, PileLocation, FVector(1.0f, 1.0f, 1.6f)));
+    }
+    for (UHierarchicalInstancedStaticMeshComponent* DockFamily : { MeshyDockInstances.Get(), MeshyDockCornerInstances.Get(),
+        MeshyDockEndInstances.Get(), MeshyDockRepairedInstances.Get() })
+    {
+        DockFamily->ComponentTags.Add(TEXT("MeshyHubDock"));
+    }
+    MeshyDockPilingInstances->ComponentTags.Add(TEXT("MeshyHubDockPiling"));
+
+    UStaticMeshComponent* Crane = NewObject<UStaticMeshComponent>(this, TEXT("MeshySalvageCrane"));
+    AddInstanceComponent(Crane);
+    Crane->SetupAttachment(SceneRoot);
+    Crane->SetStaticMesh(MeshyCraneMesh);
+    // The merged crane pivot is ground-centred, while its mast base is offset (-56.6, -18.1) cm in native space.
+    // This compensated origin puts that base on the corner platform and keeps the boom aimed southeast over the berth.
+    Crane->SetWorldLocationAndRotation(FVector(3360.2f, 168.28f, 125.0f), FRotator(0.0f, -50.0f, 0.0f));
+    Crane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Crane->SetCastShadow(true);
+    Crane->ComponentTags.Add(TEXT("MeshyHubCrane"));
+    Crane->RegisterComponent();
+}
+
 void ACoastalScene::BuildHubNature()
 {
     struct FNatureFamily
@@ -841,17 +1157,17 @@ void ACoastalScene::BuildHubNature()
     };
     const FNatureFamily Families[] = {
         { TEXT("BushFlowers"), TEXT("/Game/Generated/HubNature/Bush_Common_Flowers.Bush_Common_Flowers"), true, 1800, 6500,
-            { FTransform(FRotator(0, 20, 0), FVector(120, -1050, 126), FVector(0.72f)),
+            { FTransform(FRotator(0, 20, 0), FVector(-120, -1480, 126), FVector(0.72f)),
               FTransform(FRotator(0, 145, 0), FVector(1680, 620, 126), FVector(0.82f)) } },
         { TEXT("Fern"), TEXT("/Game/Generated/HubNature/Fern_1.Fern_1"), false, 1400, 5200,
-            { FTransform(FRotator(0, -18, 0), FVector(145, -930, 126), FVector(0.14f)),
+            { FTransform(FRotator(0, -18, 0), FVector(-170, -1300, 126), FVector(0.14f)),
               FTransform(FRotator(0, 112, 0), FVector(1880, 490, 126), FVector(0.12f)) } },
         { TEXT("GrassCommon"), TEXT("/Game/Generated/HubNature/Grass_Common_Tall.Grass_Common_Tall"), false, 1200, 4300,
-            { FTransform(FRotator(0, 8, 0), FVector(90, -710, 126), FVector(0.72f)),
+            { FTransform(FRotator(0, 8, 0), FVector(-500, -1080, 126), FVector(0.72f)),
               FTransform(FRotator(0, 80, 0), FVector(520, -2520, 126), FVector(0.62f)),
               FTransform(FRotator(0, 155, 0), FVector(1760, 920, 126), FVector(0.68f)) } },
         { TEXT("GrassWispy"), TEXT("/Game/Generated/HubNature/Grass_Wispy_Tall.Grass_Wispy_Tall"), false, 1200, 4500,
-            { FTransform(FRotator(0, -55, 0), FVector(200, -1300, 126), FVector(0.55f)),
+            { FTransform(FRotator(0, -55, 0), FVector(200, -1600, 126), FVector(0.55f)),
               FTransform(FRotator(0, 105, 0), FVector(720, -2710, 126), FVector(0.58f)),
               FTransform(FRotator(0, 48, 0), FVector(950, 330, 126), FVector(0.40f)) } },
         { TEXT("PlantBig"), TEXT("/Game/Generated/HubNature/Plant_1_Big.Plant_1_Big"), true, 1800, 6500,
@@ -934,7 +1250,7 @@ void ACoastalScene::BuildHubNature()
             }
         }
         const TArray<FVector> ClusterCenters = {
-            FVector(-120, -1100, 126), FVector(-620, -1860, 126),
+            FVector(-420, -1400, 126), FVector(-620, -1860, 126),
             FVector(1740, 820, 126), FVector(620, -2500, 126)
         };
         const bool bDenseLowFamily = FCString::Strcmp(Family.Name, TEXT("GrassCommon")) == 0

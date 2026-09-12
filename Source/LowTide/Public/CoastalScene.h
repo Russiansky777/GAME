@@ -130,6 +130,7 @@ private:
     void BuildTraderHub();
     void BuildHubSlice();
     void BuildMeshyHubHeroProps();
+    void BuildMeshyHubDeckAndDock();
     void BuildHubNature();
     void BuildMainRoute();
     void BuildAlternateRoute();
@@ -197,6 +198,32 @@ private:
     TObjectPtr<UHierarchicalInstancedStaticMeshComponent> RouteFloorCollision;
 
     UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDeckInstances;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDeckLongInstances;
+    UPROPERTY(VisibleAnywhere) TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDeckCornerInstances;
+    UPROPERTY(VisibleAnywhere) TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDeckEdgeInstances;
+    UPROPERTY(VisibleAnywhere) TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDeckRepairedInstances;
+    UPROPERTY(VisibleAnywhere) TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDeckTransitionInstances;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDockInstances;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDockCornerInstances;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDockEndInstances;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDockLadderInstances;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDockRepairedInstances;
+    UPROPERTY(VisibleAnywhere) TObjectPtr<UHierarchicalInstancedStaticMeshComponent> MeshyDockPilingInstances;
+
+    UPROPERTY(VisibleAnywhere)
     TObjectPtr<UStaticMeshComponent> CoastalTerrainSand;
 
     UPROPERTY(VisibleAnywhere)
@@ -240,6 +267,33 @@ private:
 
     UPROPERTY()
     TObjectPtr<UStaticMesh> MeshyHubBoatMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyDeckStandardMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyDeckLongMesh;
+    UPROPERTY() TObjectPtr<UStaticMesh> MeshyDeckCornerMesh;
+    UPROPERTY() TObjectPtr<UStaticMesh> MeshyDeckEdgeMesh;
+    UPROPERTY() TObjectPtr<UStaticMesh> MeshyDeckRepairedMesh;
+    UPROPERTY() TObjectPtr<UStaticMesh> MeshyDeckTransitionMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyDockStraightMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyDockCornerMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyDockEndMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyDockLadderMesh;
+
+    UPROPERTY()
+    TObjectPtr<UStaticMesh> MeshyDockRepairedMesh;
+    UPROPERTY() TObjectPtr<UStaticMesh> MeshyDockPilingMesh;
+    UPROPERTY() TObjectPtr<UStaticMesh> MeshyCraneMesh;
 
     UPROPERTY()
     TObjectPtr<UMaterialInterface> StylizedMaterial;

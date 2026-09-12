@@ -90,3 +90,29 @@ The Director generated both externally using Meshy.ai and selected them as LOW T
 | `SourceAssets/Generated/Verstak/Verstak.glb` | 100,025,792 | `E925FDAA7764455FB9F84991C684F490CD0ED7C4836971BEBF3F8867FC0AD89A` |
 
 Director-provided generated assets, not CC0 or agent-authored models. No account/plan or licence document was supplied; no additional terms are asserted. No paid generation/API or purchase was performed by the agent. Import metadata and reproduction: `MESHY_WORK_BOAT_IMPORT.md`. These assets extend the approved Meshy hub quality references without adding boat gameplay or a crafting system.
+
+## Director-generated Meshy Deck, Dock and Crane — 2026-09-12
+
+The Director generated and supplied these 13 original binary glTF assets externally using Meshy.ai for the focused starting-hub environment composition. The originals are preserved byte-for-byte under `SourceAssets/Generated`; the former temporary `Gauge` naming was normalized to `Crane`, and this asset is a coastal salvage crane/manual dockside winch, not a tide gauge or future tide instrument. No account/plan or licence document was supplied, so no additional licence terms are asserted. No paid generation/API or purchase was performed by the agent.
+
+The detailed inspection/import record is `MESHY_DECK_DOCK_IMPORT.md`; it owns topology, scale, pivot, UV, material, texture, normal, modular-fit, collision and runtime-cost metadata. This provenance entry records only source identity and preservation. SHA-256 values below were obtained with PowerShell `Get-FileHash -Algorithm SHA256` from the originals in the repository; no source bytes were edited.
+
+| Original source filename | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `SourceAssets/Generated/Deck/deck-module-corner-lowpoly.glb` | 29,336,500 | `57FEA4B12D074AA7630B41FAA04DCF7D624AD69314C6D3C0ACF9F50213F07940` |
+| `SourceAssets/Generated/Deck/deck-module-long-lowpoly.glb` | 26,121,104 | `9988D90971ADC7E7580C1B0F1E592872F1E0D856C7E238A0C1EE16E619AAAB6C` |
+| `SourceAssets/Generated/Deck/deck-module-outer-edge-lowpoly.glb` | 27,042,008 | `8C3B981D0B528D0AE143AB5961D4AC4E425B1C9D13722CE38785061850492CEE` |
+| `SourceAssets/Generated/Deck/deck-module-repaired-lowpoly.glb` | 28,695,652 | `BECA2AA2E6133BA849F7D0ABA0638A9CDA6CDCDA4E7D9A6A3FA9CCD9C8E66D6D` |
+| `SourceAssets/Generated/Deck/deck-module-standard-lowpoly.glb` | 28,078,428 | `9AFAF2A24B384ABB38299A0FD8C68BE6A13DD8AE751AAE42854BBDF6A7522004` |
+| `SourceAssets/Generated/Deck/deck-module-step-ramp-lowpoly.glb` | 28,394,304 | `6895D22C9E5916CF628DE782892D0EC237189739ADC9CCFEC6AC1390F45A6EC8` |
+| `SourceAssets/Generated/Deck/deck-module-transition-lowpoly.glb` | 28,468,500 | `77F107992DEF96B92B848F1C0B84D00DC291480BE81EB499A168C4E988E4A12B` |
+| `SourceAssets/Generated/Dock/Dock Corner Platform.glb` | 66,601,252 | `3E9501DE8A0CE19E6C91536B71D737E4BCA4C12FF93D37C28EF33185B703AE7B` |
+| `SourceAssets/Generated/Dock/Dock End Berth Section.glb` | 65,635,512 | `3DE8066ED470598E713F4AC29DC5303ED50B857BBF68F8EDBDB05340E24FDBCC` |
+| `SourceAssets/Generated/Dock/Dock Ladder Access Section.glb` | 64,949,152 | `A778FD238D512151C7158D3C1ACD9EAE778B4E3F4C8AA17B3FB5495071E2A9AC` |
+| `SourceAssets/Generated/Dock/Dock Repaired Weathered Variant.glb` | 70,164,360 | `6484FE903A06846F92E4B998FBD938FD5B753949F2C625B806FF7AB24EE418D2` |
+| `SourceAssets/Generated/Dock/Dock Straight Section.glb` | 64,785,724 | `EC606C2E3BE3A905A41B363DD261312913D6C7A651F47A26D175FF12C147D166` |
+| `SourceAssets/Generated/Crane/Meshy_AI_coastal_salvage_crane_0912114729_texture.glb` | 34,837,940 | `F3BCEA6876A5F39BAF45079B597862CBBF7E96EC1FE1578BAA54E85B2A6B1645` |
+
+These Director-provided generated assets join Budka, the mission board, Papug, Verstak and Lodka as the current Meshy visual-quality anchors. They are environment composition assets only: no tide-gauge system, boat gameplay, new mechanics or M2 scope is implied.
+
+DockPiling is a project-authored derivative of the Director-generated Dock Straight Section: retained lower wooden post shaft only, source UVs and PBR material preserved, resized to approximately 30 x 27 x 400 cm. It contains 1,834 vertices / 3,548 triangles and reuses the DockStraight material without duplicate textures. Derived GLB SHA-256: `4D3926A4739061E5253877E7AB2E57118AE044A722FC32DC4E225BAD53894694`. Reproduction, import path and measured bounds are in `MESHY_DECK_DOCK_IMPORT.md`; the untouched original GLB remains in source control.
